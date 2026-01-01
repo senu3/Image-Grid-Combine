@@ -1,0 +1,86 @@
+.preview-component {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+.preview-toolbar {
+    height: 50px;
+    background-color: var(--panel-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.zoom-controls button {
+    padding: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.zoom-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    width: 40px;
+    text-align: center;
+}
+
+.text-btn {
+    background: none;
+    color: var(--text-secondary);
+    border: none;
+}
+
+.text-btn:hover {
+    color: var(--text-primary);
+    border: none;
+}
+
+.btn-primary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--accent-color);
+    color: white;
+    border: 1px solid var(--accent-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+}
+
+.canvas-scroll-area {
+    flex: 1;
+    overflow: auto;
+    background-color: #1a1a1a;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+}
+
+.canvas-wrapper {
+    background-color: transparent;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* New Grid Styles */
+.grid-cell {
+    background-color: transparent;
+    /* or a placeholder color */
+    cursor: grab;
+    /* border: 1px solid rgba(255, 255, 255, 0.1); Optional guide */
+}
+
+.grid-cell:active {
+    cursor: grabbing;
+    z-index: 100;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
