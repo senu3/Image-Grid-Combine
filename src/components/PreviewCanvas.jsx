@@ -181,8 +181,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove })
     };
 
     const scrollStyle = {
-        overflowX: settings.mode === 'width_col' ? 'hidden' : 'auto',
-        overflowY: settings.mode === 'height_row' ? 'hidden' : 'auto',
+        overflow: 'hidden'
     };
 
     return (
@@ -200,30 +199,41 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove })
             </div>
             <div className="canvas-scroll-area" style={scrollStyle}>
                 <div
-                    className="canvas-wrapper dom-grid"
+                    className="scaling-container"
                     style={{
-                        width: layout.totalWidth,
-                        height: layout.totalHeight,
-                        transform: `scale(${zoom})`,
-                        transformOrigin: 'top left',
-                        backgroundColor: settings.backgroundColor,
-                        position: 'relative' // Context for absolute children
+                        width: layout.totalWidth * zoom,
+                        height: layout.totalHeight * zoom,
+                        position: 'relative'
                     }}
                 >
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={rectIntersection}
-                        onDragEnd={handleDragEnd}
+                    <div
+                        className="canvas-wrapper dom-grid"
+                        style={{
+                            width: layout.totalWidth,
+                            height: layout.totalHeight,
+                            transform: `scale(${zoom})`,
+                            transformOrigin: '0 0',
+                            backgroundColor: settings.backgroundColor,
+                            position: 'absolute', // Absolute within the relative scaler
+                            top: 0,
+                            left: 0
+                        }}
                     >
-                        <SortableContext
-                            items={loadedImages.map(img => img.id)}
-                            strategy={rectSortingStrategy}
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={rectIntersection}
+                            onDragEnd={handleDragEnd}
                         >
-                            {layout.cells.map((cell) => (
-                                <SortableItem key={cell.image.id} id={cell.image.id} cell={cell} />
-                            ))}
-                        </SortableContext>
-                    </DndContext>
+                            <SortableContext
+                                items={loadedImages.map(img => img.id)}
+                                strategy={rectSortingStrategy}
+                            >
+                                {layout.cells.map((cell) => (
+                                    <SortableItem key={cell.image.id} id={cell.image.id} cell={cell} />
+                                ))}
+                            </SortableContext>
+                        </DndContext>
+                    </div>
                 </div>
             </div>
         </div>
