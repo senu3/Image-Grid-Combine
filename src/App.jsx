@@ -88,7 +88,13 @@ function App() {
             </div>
           ) : (
             <div className="preview-wrap">
-              <PreviewCanvas images={images} settings={settings} onReorder={handleReorder} onRemove={handleRemove} />
+              <PreviewCanvas
+                images={images}
+                settings={settings}
+                onReorder={handleReorder}
+                onRemove={handleRemove}
+                onAdd={handleUpload}
+              />
             </div>
           )}
         </div>

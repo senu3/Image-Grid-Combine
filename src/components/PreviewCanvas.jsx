@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Download, ZoomIn, ZoomOut } from 'lucide-react';
+import { Download, ZoomIn, ZoomOut, Plus } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -95,10 +95,25 @@ function SortableItem({ id, cell, style }) {
     );
 }
 
-export default function PreviewCanvas({ images, settings, onReorder, onRemove }) {
+export default function PreviewCanvas({ images, settings, onReorder, onRemove, onAdd }) {
     const containerRef = useRef(null);
+    const fileInputRef = useRef(null);
     const [zoom, setZoom] = useState(0.5);
     const [loadedImages, setLoadedImages] = useState([]);
+
+    const handleAddClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files.length > 0 && onAdd) {
+            onAdd(Array.from(e.target.files));
+            // Reset input so same file selection works if needed
+            e.target.value = '';
+        }
+    };
 
     // Sensors for dnd-kit
     const sensors = useSensors(
@@ -232,6 +247,23 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove })
                     <span className="zoom-label">{Math.round(zoom * 100)}%</span>
                     <button onClick={() => setZoom(z => Math.min(2, z + 0.1))}><ZoomIn size={16} /></button>
                     <button onClick={() => setZoom(0.5)} className="text-btn">Fit</button>
+                    {/* Add Image Button */}
+                    <button onClick={() => document.getElementById('add-img-input').click()} className="text-btn" title="Add Images">
+                        <Plus size={16} />
+                    </button>
+                    <input
+                        id="add-img-input"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0 && onAdd) {
+                                onAdd(Array.from(e.target.files));
+                                e.target.value = '';
+                            }
+                        }}
+                    />
                 </div>
                 <button className="btn-primary" onClick={handleDownload}>
                     <Download size={16} /> Save Image
