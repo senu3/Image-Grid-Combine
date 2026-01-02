@@ -45,11 +45,38 @@ function SortableItem({ id, cell, style }) {
         opacity: isDragging ? 0.8 : 1,
     };
 
-    // Image fitting logic (cover)
+    // Image fitting logic (cover with anchor)
     const renderW = cell.imgRatio > cell.cellRatio ? cell.height * cell.imgRatio : cell.width;
     const renderH = cell.imgRatio > cell.cellRatio ? cell.height : cell.width / cell.imgRatio;
-    const renderX = cell.imgRatio > cell.cellRatio ? -(renderW - cell.width) / 2 : 0;
-    const renderY = cell.imgRatio > cell.cellRatio ? 0 : -(renderH - cell.height) / 2;
+
+    // Anchor Logic
+    // If img wider than cell (clipped horizontally):
+    // spaceX = cell.width - renderW (negative value)
+    // anchorX factor: left=0, center=0.5, right=1
+    // OffsetX = spaceX * anchorX
+
+    // If img taller than cell (clipped vertically):
+    // spaceY = cell.height - renderH (negative value)
+    // anchorY factor: top=0, center=0.5, bottom=1
+
+    let anchorX = 0.5;
+    let anchorY = 0.5;
+
+    if (cell.settings && cell.settings.anchor) {
+        const parts = cell.settings.anchor.split('-');
+        // Extract Y
+        if (parts[0] === 'top') anchorY = 0;
+        else if (parts[0] === 'bottom') anchorY = 1;
+
+        // Extract X
+        if (parts.includes('left')) anchorX = 0;
+        else if (parts.includes('right')) anchorX = 1;
+        // else center
+        if (cell.settings.anchor === 'center') { anchorX = 0.5; anchorY = 0.5; }
+    }
+
+    const renderX = cell.imgRatio > cell.cellRatio ? (cell.width - renderW) * anchorX : 0;
+    const renderY = cell.imgRatio > cell.cellRatio ? 0 : (cell.height - renderH) * anchorY;
 
     return (
         <div ref={setNodeRef} style={combinedStyle} {...attributes} {...listeners} className="grid-cell">
@@ -158,16 +185,29 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove })
             imgEl.src = image.url;
             // Since it's loaded in loadedImages, it should be instant from cache.
 
+            // Anchor Logic (duplicated from SortableItem, could be shared fn)
+            let anchorX = 0.5;
+            let anchorY = 0.5;
+            if (cell.settings && cell.settings.anchor) { // Use cell.settings.anchor for consistency
+                const parts = cell.settings.anchor.split('-');
+                if (parts[0] === 'top') anchorY = 0;
+                else if (parts[0] === 'bottom') anchorY = 1;
+
+                if (parts.includes('left')) anchorX = 0;
+                else if (parts.includes('right')) anchorX = 1;
+                if (cell.settings.anchor === 'center') { anchorX = 0.5; anchorY = 0.5; } // Use cell.settings.anchor
+            }
+
             if (imgRatio > cellRatio) {
                 renderH = height;
                 renderW = height * imgRatio;
                 renderY = y;
-                renderX = x - (renderW - width) / 2;
+                renderX = x + (width - renderW) * anchorX;
             } else {
                 renderW = width;
                 renderH = width / imgRatio;
                 renderX = x;
-                renderY = y - (renderH - height) / 2;
+                renderY = y + (height - renderH) * anchorY;
             }
 
             ctx.drawImage(imgEl, renderX, renderY, renderW, renderH);

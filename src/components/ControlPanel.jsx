@@ -115,6 +115,33 @@ export default function ControlPanel({ settings, onSettingsChange }) {
                     />
                 </div>
             </div>
+
+            <div className="section">
+                <h3>Ratio Strategy</h3>
+                <select name="fitMode" value={settings.fitMode} onChange={handleChange} style={{ width: '100%' }}>
+                    <option value="average">Average (Default)</option>
+                    <option value="portrait">Match Portrait (Tallest)</option>
+                    <option value="landscape">Match Landscape (Widest)</option>
+                </select>
+            </div>
+
+            <div className="section">
+                <h3>Anchor Point</h3>
+                <div className="anchor-grid">
+                    {['top-left', 'top-center', 'top-right',
+                        'center-left', 'center', 'center-right',
+                        'bottom-left', 'bottom-center', 'bottom-right'].map(pos => (
+                            <button
+                                key={pos}
+                                className={`anchor-btn ${settings.anchor === pos ? 'active' : ''}`}
+                                onClick={() => onSettingsChange({ ...settings, anchor: pos })}
+                                title={pos}
+                            >
+                                <div className={`dot ${pos.split('-').map(p => p[0]).join('')}`} />
+                            </button>
+                        ))}
+                </div>
+            </div>
         </div>
     );
 }

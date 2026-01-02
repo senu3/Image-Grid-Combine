@@ -65,3 +65,46 @@
     background: none;
     cursor: pointer;
 }
+
+/* Anchor Grid Styles */
+.anchor-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    width: 100px;
+    /* Compact size */
+    margin: 0 auto;
+    /* Center it? Or left aligned? */
+}
+
+.anchor-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.anchor-btn:hover {
+    border-color: var(--accent-color);
+}
+
+.anchor-btn.active {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    background-color: var(--text-secondary);
+    border-radius: 50%;
+}
+
+.anchor-btn.active .dot {
+    background-color: #fff;
+}

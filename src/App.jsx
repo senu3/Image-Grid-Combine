@@ -13,7 +13,9 @@ function App() {
     height: 1080,
     cols: 3,
     gap: 10,
-    backgroundColor: '#ffffff'
+    backgroundColor: '#ffffff',
+    fitMode: 'average', // 'average', 'portrait', 'landscape'
+    anchor: 'center' // 'top-left', 'top-center', 'top-right', ... 'center' ...
   });
 
   const handleUpload = (files) => {

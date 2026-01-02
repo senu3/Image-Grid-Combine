@@ -21,9 +21,20 @@ export function calculateLayout(images, settings) {
         // cellWidth = (Width - (numCols - 1) * gap) / numCols
         cellWidth = (width - (Math.max(0, numCols - 1)) * gap) / numCols;
 
-        // Determine Cell Height using average aspect ratio
-        const avgAspectRatio = images.reduce((sum, img) => sum + (img.width / img.height), 0) / count;
-        cellHeight = cellWidth / avgAspectRatio;
+        // Determine Cell Height using Fit Mode
+        let targetRatio;
+        const ratios = images.map(img => img.width / img.height);
+
+        if (settings.fitMode === 'portrait') {
+            targetRatio = Math.min(...ratios);
+        } else if (settings.fitMode === 'landscape') {
+            targetRatio = Math.max(...ratios);
+        } else {
+            // Average
+            targetRatio = ratios.reduce((sum, r) => sum + r, 0) / count;
+        }
+
+        cellHeight = cellWidth / targetRatio;
 
         totalHeight = numRows * cellHeight + (Math.max(0, numRows - 1)) * gap;
 
@@ -36,9 +47,20 @@ export function calculateLayout(images, settings) {
         // cellHeight = (Height - (numRows - 1) * gap) / numRows
         cellHeight = (height - (Math.max(0, numRows - 1)) * gap) / numRows;
 
-        // Determine Cell Width
-        const avgAspectRatio = images.reduce((sum, img) => sum + (img.width / img.height), 0) / count;
-        cellWidth = cellHeight * avgAspectRatio;
+        // Determine Cell Width using Fit Mode
+        let targetRatio;
+        const ratios = images.map(img => img.width / img.height);
+
+        if (settings.fitMode === 'portrait') {
+            targetRatio = Math.min(...ratios);
+        } else if (settings.fitMode === 'landscape') {
+            targetRatio = Math.max(...ratios);
+        } else {
+            // Average
+            targetRatio = ratios.reduce((sum, r) => sum + r, 0) / count;
+        }
+
+        cellWidth = cellHeight * targetRatio;
 
         totalWidth = numCols * cellWidth + (Math.max(0, numCols - 1)) * gap;
     }
@@ -59,7 +81,8 @@ export function calculateLayout(images, settings) {
             height: cellHeight,
             // Pass rendering info for canvas/cover
             imgRatio: img.width / img.height,
-            cellRatio: cellWidth / cellHeight
+            cellRatio: cellWidth / cellHeight,
+            settings // Pass global settings for anchor access
         };
     });
 
