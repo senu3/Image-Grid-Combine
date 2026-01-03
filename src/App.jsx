@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Menu, X } from 'lucide-react'
 import ImageUploader from './components/ImageUploader'
 import ControlPanel from './components/ControlPanel'
 import PreviewCanvas from './components/PreviewCanvas'
@@ -6,6 +7,7 @@ import './App.css'
 
 function App() {
   const [images, setImages] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settings, setSettings] = useState({
     mode: 'width_col', // 'width_col' or 'height_row'
     width: 1920,
@@ -62,7 +64,16 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>Image Grid Combine</h1>
+        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            className="btn-icon mobile-only"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle Menu"
+          >
+            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <h1>Image Grid Combine</h1>
+        </div>
         <div className="header-actions">
           {/* PreviewCanvas will expose save, but maybe we hoist it? 
                For now let PreviewCanvas handle save button internal logic or ref?
@@ -75,7 +86,10 @@ function App() {
         </div>
       </header>
       <main className="app-main">
-        <div className="sidebar">
+        {/* Mobile Overlay */}
+        {sidebarOpen && <div className="sidebar-overlay mobile-only" onClick={() => setSidebarOpen(false)} />}
+
+        <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="p-4 border-b border-gray-700">
             <h3>Settings</h3>
           </div>

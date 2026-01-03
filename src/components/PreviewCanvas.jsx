@@ -50,15 +50,6 @@ function SortableItem({ id, cell, style }) {
     const renderH = cell.imgRatio > cell.cellRatio ? cell.height : cell.width / cell.imgRatio;
 
     // Anchor Logic
-    // If img wider than cell (clipped horizontally):
-    // spaceX = cell.width - renderW (negative value)
-    // anchorX factor: left=0, center=0.5, right=1
-    // OffsetX = spaceX * anchorX
-
-    // If img taller than cell (clipped vertically):
-    // spaceY = cell.height - renderH (negative value)
-    // anchorY factor: top=0, center=0.5, bottom=1
-
     let anchorX = 0.5;
     let anchorY = 0.5;
 
@@ -97,9 +88,11 @@ function SortableItem({ id, cell, style }) {
 
 export default function PreviewCanvas({ images, settings, onReorder, onRemove, onAdd }) {
     const containerRef = useRef(null);
+    const scrollAreaRef = useRef(null);
     const fileInputRef = useRef(null);
     const [zoom, setZoom] = useState(0.5);
     const [loadedImages, setLoadedImages] = useState([]);
+    const [hasInitialZoomed, setHasInitialZoomed] = useState(false);
 
     const handleAddClick = () => {
         if (fileInputRef.current) {
@@ -115,29 +108,15 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         }
     };
 
-    // Sensors for dnd-kit
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8, // Avoid accidental drags
-            },
-        }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
-
     // Preload images to get dimensions
     useEffect(() => {
         let mounted = true;
         const loadAll = async () => {
             const loaded = await Promise.all(images.map(img => {
                 return new Promise((resolve) => {
-                    // If we already have dimensions (from App or previous load), utilize them?
-                    // For now, robustly loading standard Image to be sure.
                     const i = new Image();
                     i.onload = () => resolve({ ...img, width: i.width, height: i.height });
-                    i.onerror = () => resolve({ ...img, width: 100, height: 100 }); // Fallback
+                    i.onerror = () => resolve({ ...img, width: 100, height: 100 });
                     i.src = img.url;
                 });
             }));
@@ -151,19 +130,63 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         return calculateLayout(loadedImages, settings);
     }, [loadedImages, settings]);
 
+    // Smart Zoom Logic
+    const calculateFitZoom = (limit100 = false) => {
+        if (!scrollAreaRef.current || layout.totalWidth === 0 || layout.totalHeight === 0) return;
+
+        const { clientWidth, clientHeight } = scrollAreaRef.current;
+        // Use 95% of available space to avoid edge cases/scrollbars slightly appearing
+        const widthRatio = (clientWidth * 0.95) / layout.totalWidth;
+        const heightRatio = (clientHeight * 0.95) / layout.totalHeight;
+
+        const fitRatio = Math.min(widthRatio, heightRatio);
+
+        // Round down to nearest 0.1 (10% steps)
+        // e.g. 0.55 -> 0.5 (50%)
+        let newZoom = Math.floor(fitRatio * 10) / 10;
+
+        // Ensure at least 1% to prevent 0
+        newZoom = Math.max(0.01, newZoom);
+
+        if (limit100) {
+            newZoom = Math.min(newZoom, 1.0);
+        }
+
+        setZoom(newZoom);
+    };
+
+    // Auto-zoom on initial load
+    useEffect(() => {
+        if (loadedImages.length > 0 && layout.totalWidth > 0 && !hasInitialZoomed) {
+            // Slight delay to ensure DOM is painted/sized correctly if sidebar was opening etc
+            setTimeout(() => {
+                calculateFitZoom(true);
+                setHasInitialZoomed(true);
+            }, 50);
+        } else if (loadedImages.length === 0) {
+            setHasInitialZoomed(false);
+        }
+    }, [loadedImages, layout, hasInitialZoomed]);
+
+
+    // Sensors for dnd-kit
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // Avoid accidental drags
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
     const handleDragEnd = (event) => {
         const { active, over } = event;
-
-        // If over is null, we dropped outside the droppable area (SortableContext items)
-        // However, SortableContext items usually fill the container.
-        // If we drag fully outside the container, over might be null.
-        // rectIntersection is strictly checking overlap with droppable items.
-
         if (!over) {
             if (onRemove) onRemove(active.id);
             return;
         }
-
         if (active.id !== over.id) {
             const oldIndex = loadedImages.findIndex(img => img.id === active.id);
             const newIndex = loadedImages.findIndex(img => img.id === over.id);
@@ -183,7 +206,6 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         layout.cells.forEach(cell => {
-            // Draw Logic (same as before)
             const { x, y, width, height, image, imgRatio, cellRatio } = cell;
 
             ctx.save();
@@ -192,25 +214,20 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
             ctx.clip();
 
             let renderW, renderH, renderX, renderY;
-
-            // We need the ACTUAL image element for drawImage.
-            // We can grab it from DOM or re-create. DOM is easiest if loaded.
-            // Or simple:
             const imgEl = new Image();
             imgEl.src = image.url;
-            // Since it's loaded in loadedImages, it should be instant from cache.
 
-            // Anchor Logic (duplicated from SortableItem, could be shared fn)
+            // Anchor Logic
             let anchorX = 0.5;
             let anchorY = 0.5;
-            if (cell.settings && cell.settings.anchor) { // Use cell.settings.anchor for consistency
+            if (cell.settings && cell.settings.anchor) {
                 const parts = cell.settings.anchor.split('-');
                 if (parts[0] === 'top') anchorY = 0;
                 else if (parts[0] === 'bottom') anchorY = 1;
 
                 if (parts.includes('left')) anchorX = 0;
                 else if (parts.includes('right')) anchorX = 1;
-                if (cell.settings.anchor === 'center') { anchorX = 0.5; anchorY = 0.5; } // Use cell.settings.anchor
+                if (cell.settings.anchor === 'center') { anchorX = 0.5; anchorY = 0.5; }
             }
 
             if (imgRatio > cellRatio) {
@@ -246,7 +263,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                     <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))}><ZoomOut size={16} /></button>
                     <span className="zoom-label">{Math.round(zoom * 100)}%</span>
                     <button onClick={() => setZoom(z => Math.min(2, z + 0.1))}><ZoomIn size={16} /></button>
-                    <button onClick={() => setZoom(0.5)} className="text-btn" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <button onClick={() => calculateFitZoom(false)} className="text-btn" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                         <Maximize size={14} /> Fit Screen
                     </button>
                     {/* Add Image Button */}
@@ -264,19 +281,14 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                         multiple
                         accept="image/*"
                         style={{ display: 'none' }}
-                        onChange={(e) => {
-                            if (e.target.files && e.target.files.length > 0 && onAdd) {
-                                onAdd(Array.from(e.target.files));
-                                e.target.value = '';
-                            }
-                        }}
+                        onChange={handleFileChange}
                     />
                 </div>
                 <button className="btn-primary" onClick={handleDownload}>
                     <Download size={16} /> Save Image
                 </button>
             </div>
-            <div className="canvas-scroll-area" style={scrollStyle}>
+            <div className="canvas-scroll-area" ref={scrollAreaRef} style={scrollStyle}>
                 <div
                     className="scaling-container"
                     style={{
