@@ -1,4 +1,4 @@
-import { Grid3x3, Maximize, Crosshair } from 'lucide-react';
+import { Grid3x3, Maximize, Crosshair, Monitor } from 'lucide-react';
 import './ControlPanel.css';
 
 /**
@@ -21,7 +21,7 @@ export default function ControlPanel({ settings, onSettingsChange }) {
     return (
         <div className="control-panel">
             <div className="section">
-                <h3>Mode</h3>
+                <h3><Monitor size={18} /> Layout Mode</h3>
                 <div className="mode-selector">
                     <button
                         className={`mode-btn ${settings.mode === 'width_col' ? 'active' : ''}`}
@@ -135,3 +135,4 @@ export default function ControlPanel({ settings, onSettingsChange }) {
         </div>
     );
 }
+

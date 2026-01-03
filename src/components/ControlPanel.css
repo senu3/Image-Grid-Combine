@@ -108,3 +108,23 @@
 .anchor-btn.active .dot {
     background-color: #fff;
 }
+
+.advanced-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+}
+
+.sub-section {
+    margin-bottom: 1rem;
+}
+
+.sub-section h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem 0;
+    font-weight: 500;
+}

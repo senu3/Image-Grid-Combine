@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Download, ZoomIn, ZoomOut, Plus } from 'lucide-react';
+import { Download, ZoomIn, ZoomOut, Plus, Maximize } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -246,10 +246,17 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                     <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))}><ZoomOut size={16} /></button>
                     <span className="zoom-label">{Math.round(zoom * 100)}%</span>
                     <button onClick={() => setZoom(z => Math.min(2, z + 0.1))}><ZoomIn size={16} /></button>
-                    <button onClick={() => setZoom(0.5)} className="text-btn">Fit</button>
+                    <button onClick={() => setZoom(0.5)} className="text-btn" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                        <Maximize size={14} /> Fit Screen
+                    </button>
                     {/* Add Image Button */}
-                    <button onClick={() => document.getElementById('add-img-input').click()} className="text-btn" title="Add Images">
-                        <Plus size={16} />
+                    <button
+                        onClick={() => document.getElementById('add-img-input').click()}
+                        className="text-btn"
+                        title="Add Images"
+                        style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '8px' }}
+                    >
+                        <Plus size={16} /> Add Image
                     </button>
                     <input
                         id="add-img-input"
