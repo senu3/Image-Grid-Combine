@@ -1,16 +1,18 @@
-# React + Vite
+# Image Grid Combine
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+複数の画像をアップロードして、綺麗なグリッドレイアウトで結合・保存できるWebアプリケーションです。
 
-Currently, two official plugins are available:
+## 機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **簡単アップロード**: ドラッグ＆ドロップまたはファイル選択で画像を瞬時に表示。
+- **ドラッグ＆ドロップ並べ替え**: 直感的な操作で画像の配置順を変更可能。
+- **多彩なレイアウト設定**:
+    - **Mode**: 幅指定（Width × Col）または 高さ指定（Height × Row）
+    - **Ratio Strategy**:
+        - Average: 全画像の平均比率に合わせる
+        - Match Portrait: 最も縦長の画像に合わせる
+        - Match Landscape: 最も横長の画像に合わせる
+        - **Max Dimensions**: 含まれる画像群の最大幅・最大高さのボックスを作成し、画像を配置（はみ出る部分は余白として背景色で埋める）
+- **外観カスタマイズ**: 背景色、画像間のギャップ調整。
+- **アンカーポイント**: Max Dimensionsモード時など、余白ができる際の画像の配置位置（中央、右下など）を指定可能。
+- **ズーム機能**: 画面に合わせてプレビューを自動調整（Fit Screen）。
