@@ -132,12 +132,20 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
 
     // Smart Zoom Logic
     const calculateFitZoom = (limit100 = false) => {
-        if (!scrollAreaRef.current || layout.totalWidth === 0 || layout.totalHeight === 0) return;
+        const contentArea = document.querySelector('.content-area');
+        if (!contentArea || layout.totalWidth === 0 || layout.totalHeight === 0) return;
 
-        const { clientWidth, clientHeight } = scrollAreaRef.current;
-        // Use 95% of available space to avoid edge cases/scrollbars slightly appearing
-        const widthRatio = (clientWidth * 0.95) / layout.totalWidth;
-        const heightRatio = (clientHeight * 0.95) / layout.totalHeight;
+        // Calculate available space:
+        // content-area width - padding (2rem * 2 = ~64px)
+        // content-area height - toolbar (~50px) - padding (~64px)
+        const paddingBuffer = 64;
+        const toolbarHeight = 50;
+
+        const availableWidth = contentArea.clientWidth - paddingBuffer;
+        const availableHeight = contentArea.clientHeight - toolbarHeight - paddingBuffer;
+
+        const widthRatio = availableWidth / layout.totalWidth;
+        const heightRatio = availableHeight / layout.totalHeight;
 
         const fitRatio = Math.min(widthRatio, heightRatio);
 
@@ -145,8 +153,8 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         // e.g. 0.55 -> 0.5 (50%)
         let newZoom = Math.floor(fitRatio * 10) / 10;
 
-        // Ensure at least 1% to prevent 0
-        newZoom = Math.max(0.01, newZoom);
+        // Ensure at least 10% to prevent 0
+        newZoom = Math.max(0.1, newZoom);
 
         if (limit100) {
             newZoom = Math.min(newZoom, 1.0);
