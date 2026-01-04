@@ -29,6 +29,10 @@ export function calculateLayout(images, settings) {
             targetRatio = Math.min(...ratios);
         } else if (settings.fitMode === 'landscape') {
             targetRatio = Math.max(...ratios);
+        } else if (settings.fitMode === 'max_dimensions') {
+            const maxW = Math.max(...images.map(img => img.width));
+            const maxH = Math.max(...images.map(img => img.height));
+            targetRatio = maxW / maxH;
         } else {
             // Average
             targetRatio = ratios.reduce((sum, r) => sum + r, 0) / count;
@@ -55,6 +59,10 @@ export function calculateLayout(images, settings) {
             targetRatio = Math.min(...ratios);
         } else if (settings.fitMode === 'landscape') {
             targetRatio = Math.max(...ratios);
+        } else if (settings.fitMode === 'max_dimensions') {
+            const maxW = Math.max(...images.map(img => img.width));
+            const maxH = Math.max(...images.map(img => img.height));
+            targetRatio = maxW / maxH;
         } else {
             // Average
             targetRatio = ratios.reduce((sum, r) => sum + r, 0) / count;

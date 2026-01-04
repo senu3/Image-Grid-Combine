@@ -90,9 +90,6 @@ function App() {
         {sidebarOpen && <div className="sidebar-overlay mobile-only" onClick={() => setSidebarOpen(false)} />}
 
         <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-          <div className="p-4 border-b border-gray-700">
-            <h3>Settings</h3>
-          </div>
           <ControlPanel settings={settings} onSettingsChange={setSettings} />
         </div>
         <div className="content-area">

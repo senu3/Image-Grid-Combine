@@ -21,7 +21,7 @@ export default function ControlPanel({ settings, onSettingsChange }) {
     return (
         <div className="control-panel">
             <div className="section">
-                <h3><Monitor size={18} /> Layout Mode</h3>
+                <h3><Monitor size={18} /> Layout</h3>
                 <div className="mode-selector">
                     <button
                         className={`mode-btn ${settings.mode === 'width_col' ? 'active' : ''}`}
@@ -112,6 +112,7 @@ export default function ControlPanel({ settings, onSettingsChange }) {
                     <option value="average">Average (Default)</option>
                     <option value="portrait">Match Portrait (Tallest)</option>
                     <option value="landscape">Match Landscape (Widest)</option>
+                    <option value="max_dimensions">Max Dimensions (Largest W & H)</option>
                 </select>
             </div>
 

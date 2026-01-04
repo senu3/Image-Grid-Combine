@@ -45,9 +45,26 @@ function SortableItem({ id, cell, style }) {
         opacity: isDragging ? 0.8 : 1,
     };
 
-    // Image fitting logic (cover with anchor)
-    const renderW = cell.imgRatio > cell.cellRatio ? cell.height * cell.imgRatio : cell.width;
-    const renderH = cell.imgRatio > cell.cellRatio ? cell.height : cell.width / cell.imgRatio;
+    // Image fitting logic
+    // Image fitting logic
+    const isContain = cell.settings && cell.settings.fitMode === 'max_dimensions';
+
+    let renderW, renderH;
+    if (isContain) {
+        // Contain Logic: Fit within the cell
+        // If image is "wider" relative to cell, fit to width. Else fit to height.
+        if (cell.imgRatio > cell.cellRatio) {
+            renderW = cell.width;
+            renderH = cell.width / cell.imgRatio;
+        } else {
+            renderH = cell.height;
+            renderW = cell.height * cell.imgRatio;
+        }
+    } else {
+        // Cover Logic (Default): Fill the cell
+        renderW = cell.imgRatio > cell.cellRatio ? cell.height * cell.imgRatio : cell.width;
+        renderH = cell.imgRatio > cell.cellRatio ? cell.height : cell.width / cell.imgRatio;
+    }
 
     // Anchor Logic
     let anchorX = 0.5;
@@ -66,8 +83,8 @@ function SortableItem({ id, cell, style }) {
         if (cell.settings.anchor === 'center') { anchorX = 0.5; anchorY = 0.5; }
     }
 
-    const renderX = cell.imgRatio > cell.cellRatio ? (cell.width - renderW) * anchorX : 0;
-    const renderY = cell.imgRatio > cell.cellRatio ? 0 : (cell.height - renderH) * anchorY;
+    const renderX = (cell.width - renderW) * anchorX;
+    const renderY = (cell.height - renderH) * anchorY;
 
     return (
         <div ref={setNodeRef} style={combinedStyle} {...attributes} {...listeners} className="grid-cell">
@@ -238,17 +255,27 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                 if (cell.settings.anchor === 'center') { anchorX = 0.5; anchorY = 0.5; }
             }
 
-            if (imgRatio > cellRatio) {
-                renderH = height;
-                renderW = height * imgRatio;
-                renderY = y;
-                renderX = x + (width - renderW) * anchorX;
+            const isContain = settings.fitMode === 'max_dimensions';
+            if (isContain) {
+                // Contain Logic
+                if (imgRatio > cellRatio) {
+                    renderW = width;
+                    renderH = width / imgRatio;
+                } else {
+                    renderH = height;
+                    renderW = height * imgRatio;
+                }
             } else {
-                renderW = width;
-                renderH = width / imgRatio;
-                renderX = x;
-                renderY = y + (height - renderH) * anchorY;
+                // Cover Logic
+                // Use existing logic for Cover W/H
+                renderW = imgRatio > cellRatio ? height * imgRatio : width;
+                renderH = imgRatio > cellRatio ? height : width / imgRatio;
             }
+
+            // Universal Anchor Logic
+            // Works for both Cover (negative offset) and Contain (positive offset/margin)
+            renderX = x + (width - renderW) * anchorX;
+            renderY = y + (height - renderH) * anchorY;
 
             ctx.drawImage(imgEl, renderX, renderY, renderW, renderH);
             ctx.restore();
