@@ -47,6 +47,8 @@ export default function ControlPanel({ settings, onSettingsChange }) {
                             name="width"
                             value={settings.width}
                             onChange={handleChange}
+                            min="1"
+                            max="10000"
                         />
                     </div>
                     <div className="input-group">
@@ -57,6 +59,7 @@ export default function ControlPanel({ settings, onSettingsChange }) {
                             value={settings.cols}
                             onChange={handleChange}
                             min="1"
+                            max="100"
                         />
                     </div>
                 </>
@@ -69,6 +72,8 @@ export default function ControlPanel({ settings, onSettingsChange }) {
                             name="height"
                             value={settings.height}
                             onChange={handleChange}
+                            min="1"
+                            max="10000"
                         />
                     </div>
                     <div className="input-group">
@@ -79,6 +84,7 @@ export default function ControlPanel({ settings, onSettingsChange }) {
                             value={settings.rows}
                             onChange={handleChange}
                             min="1"
+                            max="100"
                         />
                     </div>
                 </>

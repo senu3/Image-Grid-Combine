@@ -24,7 +24,7 @@ function App() {
     // Create preview URLs
     const newImages = files.map(file => ({
       file,
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       url: URL.createObjectURL(file), // For preview
       name: file.name
     }));

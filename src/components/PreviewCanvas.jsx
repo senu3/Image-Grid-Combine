@@ -2,15 +2,13 @@ import { useRef, useEffect, useState, useMemo } from 'react';
 import { Download, ZoomIn, ZoomOut, Plus, Maximize } from 'lucide-react';
 import {
     DndContext,
-    closestCenter,
-    rectIntersection,
     KeyboardSensor,
     PointerSensor,
     useSensor,
     useSensors,
+    rectIntersection,
 } from '@dnd-kit/core';
 import {
-    arrayMove,
     SortableContext,
     sortableKeyboardCoordinates,
     useSortable,
@@ -18,6 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { calculateLayout } from '../utils/gridLayout';
+import { calculateRenderDimensions, calculateRenderPosition } from '../utils/anchor';
 import './PreviewCanvas.css';
 
 function SortableItem({ id, cell, style }) {
@@ -45,46 +44,23 @@ function SortableItem({ id, cell, style }) {
         opacity: isDragging ? 0.8 : 1,
     };
 
-    // Image fitting logic
-    // Image fitting logic
     const isContain = cell.settings && cell.settings.fitMode === 'max_dimensions';
 
-    let renderW, renderH;
-    if (isContain) {
-        // Contain Logic: Fit within the cell
-        // If image is "wider" relative to cell, fit to width. Else fit to height.
-        if (cell.imgRatio > cell.cellRatio) {
-            renderW = cell.width;
-            renderH = cell.width / cell.imgRatio;
-        } else {
-            renderH = cell.height;
-            renderW = cell.height * cell.imgRatio;
-        }
-    } else {
-        // Cover Logic (Default): Fill the cell
-        renderW = cell.imgRatio > cell.cellRatio ? cell.height * cell.imgRatio : cell.width;
-        renderH = cell.imgRatio > cell.cellRatio ? cell.height : cell.width / cell.imgRatio;
-    }
+    const { renderW, renderH } = calculateRenderDimensions({
+        cellWidth: cell.width,
+        cellHeight: cell.height,
+        imgRatio: cell.imgRatio,
+        cellRatio: cell.cellRatio,
+        isContain
+    });
 
-    // Anchor Logic
-    let anchorX = 0.5;
-    let anchorY = 0.5;
-
-    if (cell.settings && cell.settings.anchor) {
-        const parts = cell.settings.anchor.split('-');
-        // Extract Y
-        if (parts[0] === 'top') anchorY = 0;
-        else if (parts[0] === 'bottom') anchorY = 1;
-
-        // Extract X
-        if (parts.includes('left')) anchorX = 0;
-        else if (parts.includes('right')) anchorX = 1;
-        // else center
-        if (cell.settings.anchor === 'center') { anchorX = 0.5; anchorY = 0.5; }
-    }
-
-    const renderX = (cell.width - renderW) * anchorX;
-    const renderY = (cell.height - renderH) * anchorY;
+    const { renderX, renderY } = calculateRenderPosition({
+        cellWidth: cell.width,
+        cellHeight: cell.height,
+        renderW,
+        renderH,
+        anchor: cell.settings?.anchor
+    });
 
     return (
         <div ref={setNodeRef} style={combinedStyle} {...attributes} {...listeners} className="grid-cell">
@@ -96,7 +72,7 @@ function SortableItem({ id, cell, style }) {
                     height: renderH,
                     transform: `translate(${renderX}px, ${renderY}px)`,
                     maxWidth: 'none',
-                    pointerEvents: 'none', // Prevent img drag, handle drag on container
+                    pointerEvents: 'none',
                 }}
             />
         </div>
@@ -106,21 +82,13 @@ function SortableItem({ id, cell, style }) {
 export default function PreviewCanvas({ images, settings, onReorder, onRemove, onAdd }) {
     const containerRef = useRef(null);
     const scrollAreaRef = useRef(null);
-    const fileInputRef = useRef(null);
     const [zoom, setZoom] = useState(0.5);
     const [loadedImages, setLoadedImages] = useState([]);
     const [hasInitialZoomed, setHasInitialZoomed] = useState(false);
 
-    const handleAddClick = () => {
-        if (fileInputRef.current) {
-            fileInputRef.current.click();
-        }
-    };
-
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files.length > 0 && onAdd) {
             onAdd(Array.from(e.target.files));
-            // Reset input so same file selection works if needed
             e.target.value = '';
         }
     };
@@ -152,9 +120,6 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         const contentArea = document.querySelector('.content-area');
         if (!contentArea || layout.totalWidth === 0 || layout.totalHeight === 0) return;
 
-        // Calculate available space:
-        // content-area width - padding (2rem * 2 = ~64px)
-        // content-area height - toolbar (~50px) - padding (~64px)
         const paddingBuffer = 64;
         const toolbarHeight = 50;
 
@@ -166,11 +131,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
 
         const fitRatio = Math.min(widthRatio, heightRatio);
 
-        // Round down to nearest 0.1 (10% steps)
-        // e.g. 0.55 -> 0.5 (50%)
         let newZoom = Math.floor(fitRatio * 10) / 10;
-
-        // Ensure at least 10% to prevent 0
         newZoom = Math.max(0.1, newZoom);
 
         if (limit100) {
@@ -183,7 +144,6 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
     // Auto-zoom on initial load
     useEffect(() => {
         if (loadedImages.length > 0 && layout.totalWidth > 0 && !hasInitialZoomed) {
-            // Slight delay to ensure DOM is painted/sized correctly if sidebar was opening etc
             setTimeout(() => {
                 calculateFitZoom(true);
                 setHasInitialZoomed(true);
@@ -193,12 +153,11 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         }
     }, [loadedImages, layout, hasInitialZoomed]);
 
-
     // Sensors for dnd-kit
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Avoid accidental drags
+                distance: 8,
             },
         }),
         useSensor(KeyboardSensor, {
@@ -219,8 +178,19 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         }
     };
 
-    const handleDownload = () => {
-        // Generate Canvas on the fly
+    const handleDownload = async () => {
+        // Preload all images before drawing
+        const loadedImgs = await Promise.all(
+            layout.cells.map(cell => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ cell, img });
+                    img.onerror = () => resolve({ cell, img: null });
+                    img.src = cell.image.url;
+                });
+            })
+        );
+
         const canvas = document.createElement('canvas');
         canvas.width = layout.totalWidth;
         canvas.height = layout.totalHeight;
@@ -230,54 +200,35 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         ctx.fillStyle = settings.backgroundColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        layout.cells.forEach(cell => {
-            const { x, y, width, height, image, imgRatio, cellRatio } = cell;
+        loadedImgs.forEach(({ cell, img }) => {
+            if (!img) return;
+
+            const { x, y, width, height, imgRatio, cellRatio } = cell;
 
             ctx.save();
             ctx.beginPath();
             ctx.rect(x, y, width, height);
             ctx.clip();
 
-            let renderW, renderH, renderX, renderY;
-            const imgEl = new Image();
-            imgEl.src = image.url;
-
-            // Anchor Logic
-            let anchorX = 0.5;
-            let anchorY = 0.5;
-            if (cell.settings && cell.settings.anchor) {
-                const parts = cell.settings.anchor.split('-');
-                if (parts[0] === 'top') anchorY = 0;
-                else if (parts[0] === 'bottom') anchorY = 1;
-
-                if (parts.includes('left')) anchorX = 0;
-                else if (parts.includes('right')) anchorX = 1;
-                if (cell.settings.anchor === 'center') { anchorX = 0.5; anchorY = 0.5; }
-            }
-
             const isContain = settings.fitMode === 'max_dimensions';
-            if (isContain) {
-                // Contain Logic
-                if (imgRatio > cellRatio) {
-                    renderW = width;
-                    renderH = width / imgRatio;
-                } else {
-                    renderH = height;
-                    renderW = height * imgRatio;
-                }
-            } else {
-                // Cover Logic
-                // Use existing logic for Cover W/H
-                renderW = imgRatio > cellRatio ? height * imgRatio : width;
-                renderH = imgRatio > cellRatio ? height : width / imgRatio;
-            }
 
-            // Universal Anchor Logic
-            // Works for both Cover (negative offset) and Contain (positive offset/margin)
-            renderX = x + (width - renderW) * anchorX;
-            renderY = y + (height - renderH) * anchorY;
+            const { renderW, renderH } = calculateRenderDimensions({
+                cellWidth: width,
+                cellHeight: height,
+                imgRatio,
+                cellRatio,
+                isContain
+            });
 
-            ctx.drawImage(imgEl, renderX, renderY, renderW, renderH);
+            const { renderX, renderY } = calculateRenderPosition({
+                cellWidth: width,
+                cellHeight: height,
+                renderW,
+                renderH,
+                anchor: settings.anchor
+            });
+
+            ctx.drawImage(img, x + renderX, y + renderY, renderW, renderH);
             ctx.restore();
         });
 
@@ -340,7 +291,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                             transform: `scale(${zoom})`,
                             transformOrigin: '0 0',
                             backgroundColor: settings.backgroundColor,
-                            position: 'absolute', // Absolute within the relative scaler
+                            position: 'absolute',
                             top: 0,
                             left: 0
                         }}
