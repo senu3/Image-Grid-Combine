@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Download, ZoomIn, ZoomOut, Plus, Maximize } from 'lucide-react';
+import { Download, ZoomIn, ZoomOut, Plus, Maximize, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, CalendarArrowUp, CalendarArrowDown } from 'lucide-react';
 import {
     DndContext,
     KeyboardSensor,
@@ -79,17 +79,67 @@ function SortableItem({ id, cell, style }) {
     );
 }
 
-export default function PreviewCanvas({ images, settings, onReorder, onRemove, onAdd }) {
+export default function PreviewCanvas({ images, settings, onReorder, onRemove, onAdd, onUpdateImages }) {
     const containerRef = useRef(null);
     const scrollAreaRef = useRef(null);
     const [zoom, setZoom] = useState(0.5);
     const [loadedImages, setLoadedImages] = useState([]);
-    const [hasInitialZoomed, setHasInitialZoomed] = useState(false);
+
+    const [sortState, setSortState] = useState(0); // 0: None/Custom, 1: Name Asc, 2: Name Desc, 3: Date Asc, 4: Date Desc
+    const [autoFitEnabled, setAutoFitEnabled] = useState(true); // Auto fit screen toggle
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files.length > 0 && onAdd) {
             onAdd(Array.from(e.target.files));
             e.target.value = '';
+        }
+    };
+
+    const handleSort = () => {
+        if (!onUpdateImages) return;
+
+        // Cycle: 0(Custom) -> 1(Name Asc) -> 2(Name Desc) -> 3(Date Asc) -> 4(Date Desc) -> 1(Name Asc)...
+        // If currently 0, go to 1. If 4, go to 1.
+        let nextState = sortState + 1;
+        if (nextState > 4) nextState = 1;
+
+        const newImages = [...images];
+        switch (nextState) {
+            case 1: // Name Asc
+                newImages.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                break;
+            case 2: // Name Desc
+                newImages.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));
+                break;
+            case 3: // Date Asc (Oldest first)
+                newImages.sort((a, b) => a.file.lastModified - b.file.lastModified);
+                break;
+            case 4: // Date Desc (Newest first)
+                newImages.sort((a, b) => b.file.lastModified - a.file.lastModified);
+                break;
+        }
+
+        setSortState(nextState);
+        onUpdateImages(newImages);
+    };
+
+    const getSortIcon = () => {
+        switch (sortState) {
+            case 1: return <ArrowDownAZ size={16} />;
+            case 2: return <ArrowUpAZ size={16} />;
+            case 3: return <CalendarArrowUp size={16} />;
+            case 4: return <CalendarArrowDown size={16} />;
+            default: return <ArrowUpDown size={16} />;
+        }
+    };
+
+    const getSortLabel = () => {
+        switch (sortState) {
+            case 1: return 'Name (A-Z)';
+            case 2: return 'Name (Z-A)';
+            case 3: return 'Date (Old-New)';
+            case 4: return 'Date (New-Old)';
+            default: return 'Sort';
         }
     };
 
@@ -111,47 +161,64 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         return () => { mounted = false; };
     }, [images]);
 
-    const layout = useMemo(() => {
-        return calculateLayout(loadedImages, settings);
-    }, [loadedImages, settings]);
+    // Track previous values to detect changes for auto-zoom
+    const prevImagesLengthRef = useRef(0);
+    const prevColsRef = useRef(settings.cols);
+    const prevRowsRef = useRef(settings.rows);
+    const prevFitModeRef = useRef(settings.fitMode);
+    const prevAutoFitEnabledRef = useRef(autoFitEnabled);
 
-    // Smart Zoom Logic
-    const calculateFitZoom = (limit100 = false) => {
-        const contentArea = document.querySelector('.content-area');
-        if (!contentArea || layout.totalWidth === 0 || layout.totalHeight === 0) return;
+    // Calculate layout and zoom together to avoid flicker
+    const { layout, calculatedZoom } = useMemo(() => {
+        const layoutResult = calculateLayout(loadedImages, settings);
 
-        const paddingBuffer = 64;
-        const toolbarHeight = 50;
+        // Check if auto-zoom should be triggered
+        const imagesChanged = loadedImages.length !== prevImagesLengthRef.current;
+        const colsChanged = settings.cols !== prevColsRef.current;
+        const rowsChanged = settings.rows !== prevRowsRef.current;
+        const fitModeChanged = settings.fitMode !== prevFitModeRef.current;
+        const autoFitJustEnabled = autoFitEnabled && !prevAutoFitEnabledRef.current;
 
-        const availableWidth = contentArea.clientWidth - paddingBuffer;
-        const availableHeight = contentArea.clientHeight - toolbarHeight - paddingBuffer;
+        const shouldAutoZoom = autoFitEnabled &&
+            loadedImages.length > 0 &&
+            layoutResult.totalWidth > 0 &&
+            (imagesChanged || colsChanged || rowsChanged || fitModeChanged || autoFitJustEnabled);
 
-        const widthRatio = availableWidth / layout.totalWidth;
-        const heightRatio = availableHeight / layout.totalHeight;
+        let newZoom = null;
+        if (shouldAutoZoom) {
+            const contentArea = document.querySelector('.content-area');
+            if (contentArea) {
+                const paddingBuffer = 64;
+                const toolbarHeight = 50;
 
-        const fitRatio = Math.min(widthRatio, heightRatio);
+                const availableWidth = contentArea.clientWidth - paddingBuffer;
+                const availableHeight = contentArea.clientHeight - toolbarHeight - paddingBuffer;
 
-        let newZoom = Math.floor(fitRatio * 10) / 10;
-        newZoom = Math.max(0.1, newZoom);
+                const widthRatio = availableWidth / layoutResult.totalWidth;
+                const heightRatio = availableHeight / layoutResult.totalHeight;
 
-        if (limit100) {
-            newZoom = Math.min(newZoom, 1.0);
+                const fitRatio = Math.min(widthRatio, heightRatio);
+                newZoom = Math.floor(fitRatio * 10) / 10;
+                newZoom = Math.max(0.1, newZoom);
+                newZoom = Math.min(newZoom, 1.0); // limit to 100%
+            }
         }
 
-        setZoom(newZoom);
-    };
+        return { layout: layoutResult, calculatedZoom: newZoom };
+    }, [loadedImages, settings, autoFitEnabled]);
 
-    // Auto-zoom on initial load
+    // Update refs and apply zoom after layout calculation
     useEffect(() => {
-        if (loadedImages.length > 0 && layout.totalWidth > 0 && !hasInitialZoomed) {
-            setTimeout(() => {
-                calculateFitZoom(true);
-                setHasInitialZoomed(true);
-            }, 50);
-        } else if (loadedImages.length === 0) {
-            setHasInitialZoomed(false);
+        prevImagesLengthRef.current = loadedImages.length;
+        prevColsRef.current = settings.cols;
+        prevRowsRef.current = settings.rows;
+        prevFitModeRef.current = settings.fitMode;
+        prevAutoFitEnabledRef.current = autoFitEnabled;
+
+        if (calculatedZoom !== null) {
+            setZoom(calculatedZoom);
         }
-    }, [loadedImages, layout, hasInitialZoomed]);
+    }, [loadedImages.length, settings.cols, settings.rows, settings.fitMode, autoFitEnabled, calculatedZoom]);
 
     // Sensors for dnd-kit
     const sensors = useSensors(
@@ -175,6 +242,8 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
             const oldIndex = loadedImages.findIndex(img => img.id === active.id);
             const newIndex = loadedImages.findIndex(img => img.id === over.id);
             if (onReorder) onReorder(oldIndex, newIndex);
+            // Reset sort state to custom when manually reordering
+            if (sortState !== 0) setSortState(0);
         }
     };
 
@@ -249,9 +318,6 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                     <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))}><ZoomOut size={16} /></button>
                     <span className="zoom-label">{Math.round(zoom * 100)}%</span>
                     <button onClick={() => setZoom(z => Math.min(2, z + 0.1))}><ZoomIn size={16} /></button>
-                    <button onClick={() => calculateFitZoom(false)} className="text-btn" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                        <Maximize size={14} /> Fit Screen
-                    </button>
                     {/* Add Image Button */}
                     <button
                         onClick={() => document.getElementById('add-img-input').click()}
@@ -269,6 +335,24 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                         style={{ display: 'none' }}
                         onChange={handleFileChange}
                     />
+                    <button
+                        onClick={() => setAutoFitEnabled(!autoFitEnabled)}
+                        className={`text-btn ${autoFitEnabled ? 'active' : ''}`}
+                        title={autoFitEnabled ? 'Auto Fit: ON' : 'Auto Fit: OFF'}
+                        style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '8px' }}
+                    >
+                        <Maximize size={16} />
+                        <span className="mobile-hide">Fit Screen</span>
+                    </button>
+                    <button
+                        onClick={handleSort}
+                        className={`text-btn ${sortState !== 0 ? 'active' : ''}`}
+                        title={`Sort Mode: ${getSortLabel()}`}
+                        style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '8px' }}
+                    >
+                        {getSortIcon()}
+                        <span className="mobile-hide">{getSortLabel()}</span>
+                    </button>
                 </div>
                 <button className="btn-primary" onClick={handleDownload}>
                     <Download size={16} /> Save Image

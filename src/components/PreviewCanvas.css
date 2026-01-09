@@ -36,12 +36,24 @@
 .text-btn {
     background: none;
     color: var(--text-secondary);
-    border: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    transition: border-color 0.15s, color 0.15s;
 }
 
 .text-btn:hover {
     color: var(--text-primary);
-    border: none;
+    border-color: transparent;
+}
+
+button:focus,
+button:focus-visible {
+    outline: none !important;
+}
+
+.text-btn.active {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
 }
 
 .btn-primary {

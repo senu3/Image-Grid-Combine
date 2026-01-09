@@ -105,6 +105,7 @@ function App() {
                 onReorder={handleReorder}
                 onRemove={handleRemove}
                 onAdd={handleUpload}
+                onUpdateImages={setImages}
               />
             </div>
           )}
