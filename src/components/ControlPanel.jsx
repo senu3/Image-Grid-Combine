@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Grid3x3, Maximize, Crosshair, Monitor } from 'lucide-react';
+import { Grid3x3, Maximize, Crosshair, Monitor, ChevronUp, ChevronDown } from 'lucide-react';
 import NumberStepper from './NumberStepper';
 import './ControlPanel.css';
 
@@ -7,7 +7,7 @@ import './ControlPanel.css';
  * ControlPanel Component
  * Settings for grid layout (Width x Rows or Height x Cols).
  */
-export default function ControlPanel({ settings, onSettingsChange }) {
+export default function ControlPanel({ settings, onSettingsChange, isOpen = true, onToggle }) {
     const [activeTab, setActiveTab] = useState('layout');
 
     const handleChange = (e) => {
@@ -25,7 +25,13 @@ export default function ControlPanel({ settings, onSettingsChange }) {
     };
 
     return (
-        <div className="control-panel">
+        <div className={`control-panel ${isOpen ? 'open' : 'closed'}`}>
+            <div className="panel-handle" onClick={onToggle}>
+                <div className="handle-content">
+                    {isOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                    <span className="handle-label">Settings</span>
+                </div>
+            </div>
             {/* ... tabs ... */}
             {/* ... rest of component ... */}
             {/* I need to make sure I am replacing the right block or just targeting handleChange */}

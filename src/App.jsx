@@ -7,6 +7,8 @@ import './App.css'
 
 function App() {
   const [images, setImages] = useState([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(true); // Default open (desktop), will override with CSS/effects for mobile if needed
+
   const [settings, setSettings] = useState({
     mode: 'width_col', // 'width_col' or 'height_row'
     width: 1920,
@@ -33,11 +35,20 @@ function App() {
     }));
 
     setImages(prev => [...prev, ...newImages]);
+
+    // Auto-hide settings on mobile after upload
+    if (window.innerWidth < 768) {
+      setIsSettingsOpen(false);
+    }
   };
 
   const clearImages = () => {
     images.forEach(img => URL.revokeObjectURL(img.url));
     setImages([]);
+    // Open settings when cleared?
+    if (window.innerWidth < 768) {
+      setIsSettingsOpen(true);
+    }
   };
 
   const handleReorder = (oldIndex, newIndex) => {
@@ -78,7 +89,12 @@ function App() {
       </header>
       <main className="app-main">
         <div className="sidebar">
-          <ControlPanel settings={settings} onSettingsChange={setSettings} />
+          <ControlPanel
+            settings={settings}
+            onSettingsChange={setSettings}
+            isOpen={isSettingsOpen}
+            onToggle={() => setIsSettingsOpen(!isSettingsOpen)}
+          />
         </div>
         <div className="content-area">
           {images.length === 0 ? (

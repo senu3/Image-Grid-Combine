@@ -215,8 +215,59 @@
     .control-panel {
         padding: 0;
         gap: 0;
-        height: 100%;
+        height: auto;
+        max-height: 60vh;
+        max-height: calc(85vh - 70px);
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--panel-bg);
+
+        position: fixed;
+        bottom: 74px;
+        /* Above footer (assumed ~70px) */
+        left: 0;
+        right: 0;
+        z-index: 1002;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .control-panel.closed {
+        transform: translateY(calc(100% - 34px));
+        /* Show just the handle (34px) */
+    }
+
+    .control-panel.open {
+        transform: translateY(0);
+    }
+
+    .panel-handle {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        background-color: var(--panel-bg);
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-secondary);
+    }
+
+    .handle-content {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Remove old knob */
+    .panel-knob {
+        display: none;
     }
 
     .mobile-tabs {
@@ -228,8 +279,8 @@
         display: none;
         /* Hidden by default, controlled by React state */
         padding: 1rem;
-        padding-bottom: 80px;
-        /* Space for fixed bottom bar */
+        padding-bottom: 90px;
+        /* Space for fixed bottom bar + extra buffer */
         height: 100%;
         overflow-y: auto;
     }
