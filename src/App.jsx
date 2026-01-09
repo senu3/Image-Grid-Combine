@@ -7,7 +7,10 @@ import './App.css'
 
 function App() {
   const [images, setImages] = useState([]);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(true); // Default open (desktop), will override with CSS/effects for mobile if needed
+  // モバイルでは閉じた状態、デスクトップでは開いた状態で開始
+  const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
+    return typeof window !== 'undefined' && window.innerWidth >= 768;
+  });
 
   const [settings, setSettings] = useState({
     mode: 'width_col', // 'width_col' or 'height_row'
@@ -67,6 +70,13 @@ function App() {
       return items.filter(i => i.id !== id);
     });
   };
+
+  // モバイルで画像がある時は設定パネルを閉じる
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && images.length > 0) {
+      setIsSettingsOpen(false);
+    }
+  }, [images.length]);
 
   // Cleanup URLs on unmount
   useEffect(() => {
