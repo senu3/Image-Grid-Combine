@@ -86,7 +86,25 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
     const [loadedImages, setLoadedImages] = useState([]);
 
     const [sortState, setSortState] = useState(0); // 0: None/Custom, 1: Name Asc, 2: Name Desc, 3: Date Asc, 4: Date Desc
-    const [autoFitEnabled, setAutoFitEnabled] = useState(true); // Auto fit screen toggle
+    // Auto fit screen toggle
+    // Default to true on mobile, can be toggled on desktop.
+    const [autoFitEnabled, setAutoFitEnabled] = useState(() => {
+        return typeof window !== 'undefined' && window.innerWidth < 768 ? true : true; // Default true for all? Or logic?
+        // User request: "Mobile時は「Fit Screen」オン状態をデフォルトにして"
+        // Let's check window.innerWidth in effect or init.
+    });
+
+    useEffect(() => {
+        const checkMobile = () => {
+            if (window.innerWidth < 768) {
+                setAutoFitEnabled(true);
+            }
+        };
+        checkMobile();
+        // Optional: Listen to resize?
+        // window.addEventListener('resize', checkMobile);
+        // return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files.length > 0 && onAdd) {
@@ -318,15 +336,6 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                     <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))}><ZoomOut size={16} /></button>
                     <span className="zoom-label">{Math.round(zoom * 100)}%</span>
                     <button onClick={() => setZoom(z => Math.min(2, z + 0.1))}><ZoomIn size={16} /></button>
-                    {/* Add Image Button */}
-                    <button
-                        onClick={() => document.getElementById('add-img-input').click()}
-                        className="text-btn"
-                        title="Add Images"
-                        style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '8px' }}
-                    >
-                        <Plus size={16} /> Add Image
-                    </button>
                     <input
                         id="add-img-input"
                         type="file"
@@ -337,7 +346,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                     />
                     <button
                         onClick={() => setAutoFitEnabled(!autoFitEnabled)}
-                        className={`text-btn ${autoFitEnabled ? 'active' : ''}`}
+                        className={`text-btn btn-fit-screen ${autoFitEnabled ? 'active' : ''}`}
                         title={autoFitEnabled ? 'Auto Fit: ON' : 'Auto Fit: OFF'}
                         style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '8px' }}
                     >
@@ -354,9 +363,18 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                         <span className="mobile-hide">{getSortLabel()}</span>
                     </button>
                 </div>
-                <button className="btn-primary" onClick={handleDownload}>
-                    <Download size={16} /> Save Image
-                </button>
+                <div className="toolbar-actions">
+                    <button
+                        onClick={() => document.getElementById('add-img-input').click()}
+                        className="btn-tertiary"
+                        title="Add Images"
+                    >
+                        <Plus size={16} /> <span>Add Image</span>
+                    </button>
+                    <button className="btn-primary" onClick={handleDownload}>
+                        <Download size={16} /> Save Image
+                    </button>
+                </div>
             </div>
             <div className="canvas-scroll-area" ref={scrollAreaRef} style={scrollStyle}>
                 <div

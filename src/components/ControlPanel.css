@@ -123,8 +123,123 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.85rem;
     color: var(--text-secondary);
     margin: 0 0 0.5rem 0;
     font-weight: 500;
+}
+
+/* Number Stepper */
+.number-stepper {
+    display: flex;
+    align-items: center;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.stepper-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.stepper-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+/* Removed invalid text */
+
+.stepper-input {
+    flex: 1;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    width: 50px;
+    /* Min width */
+    padding: 0;
+    -moz-appearance: textfield;
+    /* Remove spinners in Firefox */
+}
+
+.stepper-input::-webkit-outer-spin-button,
+.stepper-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.stepper-input:focus {
+    outline: none;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Mobile Tabs */
+.mobile-tabs {
+    display: none;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--panel-bg);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 0.75rem 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+}
+
+@media (max-width: 768px) {
+    .control-panel {
+        padding: 0;
+        gap: 0;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .mobile-tabs {
+        display: flex;
+        overflow-x: auto;
+    }
+
+    .section {
+        display: none;
+        /* Hidden by default, controlled by React state */
+        padding: 1rem;
+        padding-bottom: 80px;
+        /* Space for fixed bottom bar */
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    .section.active {
+        display: block;
+    }
+
+    .section h3 {
+        display: flex;
+        /* Revert to flex or block. */
+    }
 }

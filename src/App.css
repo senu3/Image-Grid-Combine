@@ -103,38 +103,49 @@
         display: flex !important;
     }
 
-    /* ... rest of media query ... */
     .app-header {
         padding: 0 1rem;
     }
 
+    .app-main {
+        flex-direction: column;
+    }
+
+    /* Mobile Layout: Preview Top, Settings Bottom */
+    .content-area {
+        height: 45vh;
+        /* Fixed height for preview */
+        flex: none;
+        order: 1;
+        /* Preview first */
+    }
+
     .sidebar {
-        position: fixed;
-        top: 60px;
-        /* Below header */
-        left: 0;
-        bottom: 0;
-        z-index: 1000;
-        width: 80%;
-        /* Takes up most of screen but leaves some space */
-        max-width: 320px;
-        transform: translateX(-100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 4px 0 12px rgba(0, 0, 0, 0.5);
+        width: 100%;
+        flex: 1;
+        /* Take remaining space */
+        order: 2;
+        /* Settings second */
+        border-right: none;
+        border-top: 1px solid var(--border-color);
+        position: static;
+        /* Reset fixed positioning */
+        transform: none;
+        box-shadow: none;
+        overflow: hidden;
+        /* ControlPanel handles scrolling */
     }
 
     .sidebar.open {
-        transform: translateX(0);
+        transform: none;
     }
 
     .sidebar-overlay {
-        position: fixed;
-        top: 60px;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 999;
-        backdrop-filter: blur(2px);
+        display: none !important;
+    }
+
+    .btn-icon.mobile-only {
+        display: none !important;
+        /* Hide hamburger menu */
     }
 }

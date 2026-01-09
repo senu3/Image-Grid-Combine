@@ -7,7 +7,6 @@ import './App.css'
 
 function App() {
   const [images, setImages] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settings, setSettings] = useState({
     mode: 'width_col', // 'width_col' or 'height_row'
     width: 1920,
@@ -19,6 +18,10 @@ function App() {
     fitMode: 'average', // 'average', 'portrait', 'landscape'
     anchor: 'center' // 'top-left', 'top-center', 'top-right', ... 'center' ...
   });
+
+  const handleUpdateImages = (newImages) => {
+    setImages(newImages);
+  };
 
   const handleUpload = (files) => {
     // Create preview URLs
@@ -65,31 +68,16 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button
-            className="btn-icon mobile-only"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Toggle Menu"
-          >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
           <h1>Image Grid Combine</h1>
         </div>
         <div className="header-actions">
-          {/* PreviewCanvas will expose save, but maybe we hoist it? 
-               For now let PreviewCanvas handle save button internal logic or ref?
-               Better to have save button in Header that triggers canvas save.
-               We can pass a ref to PreviewCanvas.
-           */}
           <button className="btn-secondary" onClick={clearImages} disabled={images.length === 0}>
             Clear All
           </button>
         </div>
       </header>
       <main className="app-main">
-        {/* Mobile Overlay */}
-        {sidebarOpen && <div className="sidebar-overlay mobile-only" onClick={() => setSidebarOpen(false)} />}
-
-        <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar">
           <ControlPanel settings={settings} onSettingsChange={setSettings} />
         </div>
         <div className="content-area">
@@ -105,7 +93,7 @@ function App() {
                 onReorder={handleReorder}
                 onRemove={handleRemove}
                 onAdd={handleUpload}
-                onUpdateImages={setImages}
+                onUpdateImages={handleUpdateImages}
               />
             </div>
           )}

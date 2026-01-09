@@ -15,6 +15,48 @@
     padding: 0 1rem;
 }
 
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    border-color: var(--accent-color);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.btn-tertiary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #27272a;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-tertiary:hover {
+    border-color: var(--accent-color);
+    background-color: #3f3f46;
+}
+
 .zoom-controls {
     display: flex;
     align-items: center;
@@ -95,4 +137,55 @@ button:focus-visible {
     cursor: grabbing;
     z-index: 100;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 768px) {
+    .preview-toolbar {
+        /* On mobile, toolbar only contains Zoom/Sort controls? 
+           User said: Preview at top.
+           We can keep some controls there.
+        */
+        height: 48px;
+        padding: 0 0.5rem;
+    }
+
+    /* Hide "Fit Screen" button text or button entirely? User said hide button. */
+    .btn-fit-screen {
+        display: none !important;
+    }
+
+    /* Move Add/Save to bottom fixed bar */
+    .toolbar-actions {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: var(--panel-bg);
+        border-top: 1px solid var(--border-color);
+        padding: 0.75rem 1rem;
+        z-index: 1001;
+        /* Above sidebar */
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .toolbar-actions button {
+        flex: 1;
+        justify-content: center;
+        height: 44px;
+    }
+
+    /* Adjust padding for scroll area so content isn't hidden behind fixed bar if it were overlaying? 
+       Actually layout is: Preview (45vh) | Settings (flex). 
+       The fixed buttons will overlay the bottom of Settings.
+       We should add padding-bottom to sidebar/settings area so buttons don't cover content.
+    */
+
+    .zoom-controls {
+        gap: 0.25rem;
+    }
+
+    .mobile-hide {
+        display: none;
+    }
 }
