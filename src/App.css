@@ -126,35 +126,12 @@
         /* Settings second */
         border-right: none;
         border-top: 1px solid var(--border-color);
-        position: fixed;
-        /* Sheet mode */
-        bottom: 0;
-        left: 0;
-        right: 0;
+        /* Note: ControlPanel itself uses position: fixed in mobile, sidebar is just wrapper */
         height: auto;
-        max-height: 55vh;
-        /* Max height for sheet */
-        background-color: var(--panel-bg);
-        z-index: 1002;
-        border-top-left-radius: 16px;
-        border-top-right-radius: 16px;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .sidebar {
-        display: contents;
-        /* Remove sidebar wrapper influence */
-    }
-
-    .sidebar-overlay {
-        display: none !important;
-    }
-
-    .btn-icon.mobile-only {
-        display: none !important;
-        /* Hide hamburger menu */
+        overflow: visible;
+        /* Allow ControlPanel to overflow */
+        background-color: transparent;
+        z-index: auto;
+        /* ControlPanel manages its own z-index */
     }
 }
