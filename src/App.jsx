@@ -14,9 +14,9 @@ function App() {
 
   const [settings, setSettings] = useState({
     mode: 'width_col', // 'width_col' or 'height_row'
-    width: 1920,
+    width: 1200,
     rows: 2,
-    height: 1080,
+    height: 1600,
     cols: 3,
     gap: 10,
     backgroundColor: '#ffffff',

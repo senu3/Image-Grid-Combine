@@ -166,8 +166,8 @@ export default function ControlPanel({ settings, onSettingsChange, isOpen = true
             <div className={`section ${activeTab === 'advanced' ? 'active' : ''}`}>
                 <h3><Maximize size={18} /> Ratio Strategy</h3>
                 <select name="fitMode" value={settings.fitMode} onChange={handleChange} style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
-                    <option value="average">Average (Default)</option>
-                    <option value="portrait">Match Portrait (Tallest)</option>
+                    <option value="average">Average</option>
+                    <option value="portrait">Match Portrait (Highest)</option>
                     <option value="landscape">Match Landscape (Widest)</option>
                     <option value="max_dimensions">Max Dimensions (Largest W & H)</option>
                 </select>
