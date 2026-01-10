@@ -211,12 +211,17 @@
     border-bottom-color: var(--accent-color);
 }
 
+.panel-handle {
+    /* Default hidden, only show in bottom-sheet mode */
+    display: none;
+}
+
 @media (max-width: 768px) {
     .control-panel {
         padding: 0;
         gap: 0;
         height: auto;
-        max-height: 60vh;
+        /* max-height: 60vh; Removed duplicate */
         max-height: calc(85vh - 70px);
         overflow: hidden;
         display: flex;
@@ -269,7 +274,11 @@
     .panel-knob {
         display: none;
     }
+}
 
+/* Tabs logic: Apply on Mobile OR Small Height */
+@media (max-width: 768px),
+(max-height: 768px) {
     .mobile-tabs {
         display: flex;
         overflow-x: auto;
@@ -279,6 +288,7 @@
         display: none;
         /* Hidden by default, controlled by React state */
         padding: 1rem;
+        /* Adjust padding for short screens/mobile */
         padding-bottom: 90px;
         /* Space for fixed bottom bar + extra buffer */
         height: 100%;

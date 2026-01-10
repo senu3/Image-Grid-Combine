@@ -184,6 +184,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
     const prevColsRef = useRef(settings.cols);
     const prevRowsRef = useRef(settings.rows);
     const prevFitModeRef = useRef(settings.fitMode);
+    const prevModeRef = useRef(settings.mode); // Track layout mode
     const prevAutoFitEnabledRef = useRef(autoFitEnabled);
 
     // Calculate layout and zoom together to avoid flicker
@@ -195,12 +196,13 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         const colsChanged = settings.cols !== prevColsRef.current;
         const rowsChanged = settings.rows !== prevRowsRef.current;
         const fitModeChanged = settings.fitMode !== prevFitModeRef.current;
+        const modeChanged = settings.mode !== prevModeRef.current; // Check mode change
         const autoFitJustEnabled = autoFitEnabled && !prevAutoFitEnabledRef.current;
 
         const shouldAutoZoom = autoFitEnabled &&
             loadedImages.length > 0 &&
             layoutResult.totalWidth > 0 &&
-            (imagesChanged || colsChanged || rowsChanged || fitModeChanged || autoFitJustEnabled);
+            (imagesChanged || colsChanged || rowsChanged || fitModeChanged || modeChanged || autoFitJustEnabled);
 
         let newZoom = null;
         if (shouldAutoZoom) {
@@ -216,7 +218,9 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                 const heightRatio = availableHeight / layoutResult.totalHeight;
 
                 const fitRatio = Math.min(widthRatio, heightRatio);
-                newZoom = Math.floor(fitRatio * 10) / 10;
+                // User requested precision like 11%, 13% for auto-fit. 
+                // Using 1% precision (floor to 2 decimals)
+                newZoom = Math.floor(fitRatio * 100) / 100;
                 newZoom = Math.max(0.1, newZoom);
                 newZoom = Math.min(newZoom, 1.0); // limit to 100%
             }
@@ -231,12 +235,13 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         prevColsRef.current = settings.cols;
         prevRowsRef.current = settings.rows;
         prevFitModeRef.current = settings.fitMode;
+        prevModeRef.current = settings.mode;
         prevAutoFitEnabledRef.current = autoFitEnabled;
 
         if (calculatedZoom !== null) {
             setZoom(calculatedZoom);
         }
-    }, [loadedImages.length, settings.cols, settings.rows, settings.fitMode, autoFitEnabled, calculatedZoom]);
+    }, [loadedImages.length, settings.cols, settings.rows, settings.fitMode, settings.mode, autoFitEnabled, calculatedZoom]);
 
     // Sensors for dnd-kit
     const sensors = useSensors(
@@ -333,9 +338,9 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         <div className="preview-component" ref={containerRef}>
             <div className="preview-toolbar">
                 <div className="zoom-controls">
-                    <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))}><ZoomOut size={16} /></button>
+                    <button onClick={() => setZoom(z => Math.max(0.1, Math.ceil((z * 10) - 1) / 10))} title="Zoom Out (10% steps)"><ZoomOut size={16} /></button>
                     <span className="zoom-label">{Math.round(zoom * 100)}%</span>
-                    <button onClick={() => setZoom(z => Math.min(2, z + 0.1))}><ZoomIn size={16} /></button>
+                    <button onClick={() => setZoom(z => Math.min(2, Math.floor((z * 10) + 1) / 10))} title="Zoom In (10% steps)"><ZoomIn size={16} /></button>
                     <input
                         id="add-img-input"
                         type="file"
