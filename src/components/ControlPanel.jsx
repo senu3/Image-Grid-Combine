@@ -46,10 +46,10 @@ export default function ControlPanel({ settings, onSettingsChange, isOpen = true
                     Layout
                 </button>
                 <button
-                    className={`tab-btn ${activeTab === 'appearance' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('appearance')}
+                    className={`tab-btn ${activeTab === 'spacing' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('spacing')}
                 >
-                    Appearance
+                    Spacing
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'advanced' ? 'active' : ''}`}
@@ -127,8 +127,8 @@ export default function ControlPanel({ settings, onSettingsChange, isOpen = true
                 )}
             </div>
 
-            <div className={`section ${activeTab === 'appearance' ? 'active' : ''}`}>
-                <h3><Grid3x3 size={18} /> Appearance</h3>
+            <div className={`section ${activeTab === 'spacing' ? 'active' : ''}`}>
+                <h3><Grid3x3 size={18} /> Spacing</h3>
                 <div className="input-group">
                     <label>Gap (px)</label>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
