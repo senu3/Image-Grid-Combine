@@ -1,5 +1,16 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
-import { Download, ZoomIn, ZoomOut, Plus, Maximize, ArrowUpDown, ArrowUpAZ, ArrowDownAZ, CalendarArrowUp, CalendarArrowDown } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import {
+    Download,
+    ZoomIn,
+    ZoomOut,
+    Plus,
+    Maximize,
+    ArrowUpDown,
+    ArrowUpAZ,
+    ArrowDownAZ,
+    CalendarArrowUp,
+    CalendarArrowDown
+} from 'lucide-react';
 import {
     DndContext,
     KeyboardSensor,
@@ -19,7 +30,138 @@ import { calculateLayout } from '../utils/gridLayout';
 import { calculateRenderDimensions, calculateRenderPosition } from '../utils/anchor';
 import './PreviewCanvas.css';
 
-function SortableItem({ id, cell, style }) {
+const SORT_DETAILS = {
+    0: { label: 'Sort', Icon: ArrowUpDown },
+    1: { label: 'Name (A-Z)', Icon: ArrowDownAZ },
+    2: { label: 'Name (Z-A)', Icon: ArrowUpAZ },
+    3: { label: 'Date (Old-New)', Icon: CalendarArrowUp },
+    4: { label: 'Date (New-Old)', Icon: CalendarArrowDown },
+};
+
+const FILE_NAME_COLLATOR = new Intl.Collator(undefined, {
+    numeric: true,
+    sensitivity: 'base',
+});
+
+const MIN_ZOOM = 0.1;
+const MAX_MANUAL_ZOOM = 2;
+const MAX_AUTO_FIT_ZOOM = 1;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const IMAGE_BITMAP_TIMEOUT_MS = 1500;
+const IMAGE_LOAD_TIMEOUT_MS = 5000;
+
+function loadImageElement(image) {
+    return new Promise((resolve) => {
+        const element = new Image();
+        let settled = false;
+
+        const finalize = (value) => {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            window.clearTimeout(timeoutId);
+            element.onload = null;
+            element.onerror = null;
+            resolve(value);
+        };
+
+        element.decoding = 'async';
+        element.onload = () => finalize(element);
+        element.onerror = () => finalize(null);
+        const timeoutId = window.setTimeout(() => finalize(null), IMAGE_LOAD_TIMEOUT_MS);
+        element.src = image.url;
+    });
+}
+
+async function loadImageDimensions(image, element) {
+    const fallbackDimensions = {
+        width: element?.naturalWidth || element?.width || 100,
+        height: element?.naturalHeight || element?.height || 100,
+    };
+
+    if (typeof createImageBitmap === 'function' && image.file instanceof Blob) {
+        try {
+            const bitmap = await Promise.race([
+                createImageBitmap(image.file, {
+                    imageOrientation: 'from-image',
+                }),
+                new Promise((_, reject) => {
+                    window.setTimeout(() => {
+                        reject(new Error('createImageBitmap timed out'));
+                    }, IMAGE_BITMAP_TIMEOUT_MS);
+                }),
+            ]);
+            const dimensions = {
+                width: bitmap.width || fallbackDimensions.width,
+                height: bitmap.height || fallbackDimensions.height,
+            };
+            bitmap.close();
+            return dimensions;
+        } catch {
+            // Fall through to the HTMLImageElement dimensions below.
+        }
+    }
+
+    return fallbackDimensions;
+}
+
+async function loadImageAsset(image) {
+    const element = await loadImageElement(image);
+    if (!element) {
+        return {
+            element: null,
+            width: 100,
+            height: 100,
+            status: 'error',
+        };
+    }
+
+    const dimensions = await loadImageDimensions(image, element);
+
+    return {
+        element,
+        width: dimensions.width,
+        height: dimensions.height,
+        status: 'ready',
+    };
+}
+
+function imageAssetsReducer(state, action) {
+    switch (action.type) {
+        case 'upsert':
+            if (state[action.id] === action.asset) {
+                return state;
+            }
+
+            return {
+                ...state,
+                [action.id]: action.asset,
+            };
+
+        case 'prune': {
+            let hasChanges = false;
+            const nextState = {};
+
+            Object.entries(state).forEach(([id, asset]) => {
+                if (action.activeIds.has(id)) {
+                    nextState[id] = asset;
+                    return;
+                }
+
+                hasChanges = true;
+            });
+
+            return hasChanges ? nextState : state;
+        }
+
+        default:
+            return state;
+    }
+}
+
+function SortableItem({ id, cell }) {
     const {
         attributes,
         listeners,
@@ -30,7 +172,6 @@ function SortableItem({ id, cell, style }) {
     } = useSortable({ id });
 
     const combinedStyle = {
-        ...style,
         transform: CSS.Transform.toString(transform),
         transition,
         position: 'absolute',
@@ -44,7 +185,7 @@ function SortableItem({ id, cell, style }) {
         opacity: isDragging ? 0.8 : 1,
     };
 
-    const isContain = cell.settings && cell.settings.fitMode === 'max_dimensions';
+    const isContain = cell.settings.fitMode === 'max_dimensions';
 
     const { renderW, renderH } = calculateRenderDimensions({
         cellWidth: cell.width,
@@ -59,15 +200,19 @@ function SortableItem({ id, cell, style }) {
         cellHeight: cell.height,
         renderW,
         renderH,
-        anchor: cell.settings?.anchor
+        anchor: cell.settings.anchor
     });
 
     return (
         <div ref={setNodeRef} style={combinedStyle} {...attributes} {...listeners} className="grid-cell">
             <img
                 src={cell.image.url}
-                alt="grid item"
+                alt={cell.image.name}
                 style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    display: 'block',
                     width: renderW,
                     height: renderH,
                     transform: `translate(${renderX}px, ${renderY}px)`,
@@ -80,170 +225,170 @@ function SortableItem({ id, cell, style }) {
 }
 
 export default function PreviewCanvas({ images, settings, onReorder, onRemove, onAdd, onUpdateImages }) {
-    const containerRef = useRef(null);
     const scrollAreaRef = useRef(null);
-    const [zoom, setZoom] = useState(0.5);
-    const [loadedImages, setLoadedImages] = useState([]);
+    const addInputRef = useRef(null);
+    const isMountedRef = useRef(true);
+    const activeImageIdsRef = useRef(new Set());
+    const imageAssetCacheRef = useRef(new Map());
+    const imageLoadPromisesRef = useRef(new Map());
 
-    const [sortState, setSortState] = useState(0); // 0: None/Custom, 1: Name Asc, 2: Name Desc, 3: Date Asc, 4: Date Desc
-    // Auto fit screen toggle
-    // Default to true on mobile, can be toggled on desktop.
-    const [autoFitEnabled, setAutoFitEnabled] = useState(() => {
-        return typeof window !== 'undefined' && window.innerWidth < 768 ? true : true; // Default true for all? Or logic?
-        // User request: "Mobile時は「Fit Screen」オン状態をデフォルトにして"
-        // Let's check window.innerWidth in effect or init.
-    });
+    const [manualZoom, setManualZoom] = useState(0.5);
+    const [sortState, setSortState] = useState(0);
+    const [autoFitEnabled, setAutoFitEnabled] = useState(true);
+    const [imageAssets, dispatchImageAssets] = useReducer(imageAssetsReducer, {});
+    const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
-        const checkMobile = () => {
-            if (window.innerWidth < 768) {
-                setAutoFitEnabled(true);
-            }
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
         };
-        checkMobile();
-        // Optional: Listen to resize?
-        // window.addEventListener('resize', checkMobile);
-        // return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    const handleFileChange = (e) => {
-        if (e.target.files && e.target.files.length > 0 && onAdd) {
-            onAdd(Array.from(e.target.files));
-            e.target.value = '';
-        }
-    };
-
-    const handleSort = () => {
-        if (!onUpdateImages) return;
-
-        // Cycle: 0(Custom) -> 1(Name Asc) -> 2(Name Desc) -> 3(Date Asc) -> 4(Date Desc) -> 1(Name Asc)...
-        // If currently 0, go to 1. If 4, go to 1.
-        let nextState = sortState + 1;
-        if (nextState > 4) nextState = 1;
-
-        const newImages = [...images];
-        switch (nextState) {
-            case 1: // Name Asc
-                newImages.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-                break;
-            case 2: // Name Desc
-                newImages.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' }));
-                break;
-            case 3: // Date Asc (Oldest first)
-                newImages.sort((a, b) => a.file.lastModified - b.file.lastModified);
-                break;
-            case 4: // Date Desc (Newest first)
-                newImages.sort((a, b) => b.file.lastModified - a.file.lastModified);
-                break;
+    const ensureImageAsset = useCallback((image) => {
+        const cachedAsset = imageAssetCacheRef.current.get(image.id);
+        if (cachedAsset) {
+            return Promise.resolve(cachedAsset);
         }
 
-        setSortState(nextState);
-        onUpdateImages(newImages);
-    };
-
-    const getSortIcon = () => {
-        switch (sortState) {
-            case 1: return <ArrowDownAZ size={16} />;
-            case 2: return <ArrowUpAZ size={16} />;
-            case 3: return <CalendarArrowUp size={16} />;
-            case 4: return <CalendarArrowDown size={16} />;
-            default: return <ArrowUpDown size={16} />;
+        const pendingAsset = imageLoadPromisesRef.current.get(image.id);
+        if (pendingAsset) {
+            return pendingAsset;
         }
-    };
 
-    const getSortLabel = () => {
-        switch (sortState) {
-            case 1: return 'Name (A-Z)';
-            case 2: return 'Name (Z-A)';
-            case 3: return 'Date (Old-New)';
-            case 4: return 'Date (New-Old)';
-            default: return 'Sort';
-        }
-    };
+        const loadPromise = loadImageAsset(image).then((asset) => {
+            imageLoadPromisesRef.current.delete(image.id);
 
-    // Preload images to get dimensions
+            if (!activeImageIdsRef.current.has(image.id)) {
+                return asset;
+            }
+
+            imageAssetCacheRef.current.set(image.id, asset);
+
+            if (isMountedRef.current) {
+                dispatchImageAssets({ type: 'upsert', id: image.id, asset });
+            }
+
+            return asset;
+        });
+
+        imageLoadPromisesRef.current.set(image.id, loadPromise);
+        return loadPromise;
+    }, []);
+
     useEffect(() => {
-        let mounted = true;
-        const loadAll = async () => {
-            const loaded = await Promise.all(images.map(img => {
-                return new Promise((resolve) => {
-                    const i = new Image();
-                    i.onload = () => resolve({ ...img, width: i.width, height: i.height });
-                    i.onerror = () => resolve({ ...img, width: 100, height: 100 });
-                    i.src = img.url;
-                });
-            }));
-            if (mounted) setLoadedImages(loaded);
-        };
-        loadAll();
-        return () => { mounted = false; };
-    }, [images]);
+        const nextActiveIds = new Set(images.map((image) => image.id));
+        activeImageIdsRef.current = nextActiveIds;
+        dispatchImageAssets({ type: 'prune', activeIds: nextActiveIds });
 
-    // Track previous values to detect changes for auto-zoom
-    const prevImagesLengthRef = useRef(0);
-    const prevColsRef = useRef(settings.cols);
-    const prevRowsRef = useRef(settings.rows);
-    const prevFitModeRef = useRef(settings.fitMode);
-    const prevModeRef = useRef(settings.mode); // Track layout mode
-    const prevAutoFitEnabledRef = useRef(autoFitEnabled);
-
-    // Calculate layout and zoom together to avoid flicker
-    const { layout, calculatedZoom } = useMemo(() => {
-        const layoutResult = calculateLayout(loadedImages, settings);
-
-        // Check if auto-zoom should be triggered
-        const imagesChanged = loadedImages.length !== prevImagesLengthRef.current;
-        const colsChanged = settings.cols !== prevColsRef.current;
-        const rowsChanged = settings.rows !== prevRowsRef.current;
-        const fitModeChanged = settings.fitMode !== prevFitModeRef.current;
-        const modeChanged = settings.mode !== prevModeRef.current; // Check mode change
-        const autoFitJustEnabled = autoFitEnabled && !prevAutoFitEnabledRef.current;
-
-        const shouldAutoZoom = autoFitEnabled &&
-            loadedImages.length > 0 &&
-            layoutResult.totalWidth > 0 &&
-            (imagesChanged || colsChanged || rowsChanged || fitModeChanged || modeChanged || autoFitJustEnabled);
-
-        let newZoom = null;
-        if (shouldAutoZoom) {
-            const contentArea = document.querySelector('.content-area');
-            if (contentArea) {
-                const paddingBuffer = 64;
-                const toolbarHeight = 50;
-
-                const availableWidth = contentArea.clientWidth - paddingBuffer;
-                const availableHeight = contentArea.clientHeight - toolbarHeight - paddingBuffer;
-
-                const widthRatio = availableWidth / layoutResult.totalWidth;
-                const heightRatio = availableHeight / layoutResult.totalHeight;
-
-                const fitRatio = Math.min(widthRatio, heightRatio);
-                // User requested precision like 11%, 13% for auto-fit. 
-                // Using 1% precision (floor to 2 decimals)
-                newZoom = Math.floor(fitRatio * 100) / 100;
-                newZoom = Math.max(0.1, newZoom);
-                newZoom = Math.min(newZoom, 1.0); // limit to 100%
+        for (const id of imageAssetCacheRef.current.keys()) {
+            if (!nextActiveIds.has(id)) {
+                imageAssetCacheRef.current.delete(id);
             }
         }
 
-        return { layout: layoutResult, calculatedZoom: newZoom };
-    }, [loadedImages, settings, autoFitEnabled]);
-
-    // Update refs and apply zoom after layout calculation
-    useEffect(() => {
-        prevImagesLengthRef.current = loadedImages.length;
-        prevColsRef.current = settings.cols;
-        prevRowsRef.current = settings.rows;
-        prevFitModeRef.current = settings.fitMode;
-        prevModeRef.current = settings.mode;
-        prevAutoFitEnabledRef.current = autoFitEnabled;
-
-        if (calculatedZoom !== null) {
-            setZoom(calculatedZoom);
+        for (const id of imageLoadPromisesRef.current.keys()) {
+            if (!nextActiveIds.has(id)) {
+                imageLoadPromisesRef.current.delete(id);
+            }
         }
-    }, [loadedImages.length, settings.cols, settings.rows, settings.fitMode, settings.mode, autoFitEnabled, calculatedZoom]);
 
-    // Sensors for dnd-kit
+        images.forEach((image) => {
+            if (!imageAssetCacheRef.current.has(image.id)) {
+                void ensureImageAsset(image);
+            }
+        });
+    }, [images, ensureImageAsset]);
+
+    useEffect(() => {
+        const scrollArea = scrollAreaRef.current;
+        if (!scrollArea) {
+            return undefined;
+        }
+
+        const updateViewportSize = () => {
+            const styles = window.getComputedStyle(scrollArea);
+            const horizontalPadding = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+            const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+            const nextViewportSize = {
+                width: Math.max(0, scrollArea.clientWidth - horizontalPadding),
+                height: Math.max(0, scrollArea.clientHeight - verticalPadding),
+            };
+
+            setViewportSize((currentSize) => {
+                if (
+                    currentSize.width === nextViewportSize.width &&
+                    currentSize.height === nextViewportSize.height
+                ) {
+                    return currentSize;
+                }
+
+                return nextViewportSize;
+            });
+        };
+
+        updateViewportSize();
+
+        const observer = new ResizeObserver(updateViewportSize);
+        observer.observe(scrollArea);
+        window.addEventListener('resize', updateViewportSize);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', updateViewportSize);
+        };
+    }, []);
+
+    const loadedImages = useMemo(() => {
+        return images.map((image) => {
+            const asset = imageAssets[image.id];
+
+            return {
+                ...image,
+                width: asset?.width ?? null,
+                height: asset?.height ?? null,
+            };
+        });
+    }, [images, imageAssets]);
+
+    const hasPendingImageMetadata = loadedImages.some((image) => image.width == null || image.height == null);
+
+    const layout = useMemo(() => {
+        if (images.length === 0 || hasPendingImageMetadata) {
+            return { totalWidth: 0, totalHeight: 0, cells: [] };
+        }
+
+        return calculateLayout(loadedImages, settings);
+    }, [hasPendingImageMetadata, images.length, loadedImages, settings]);
+
+    const autoFitZoom = useMemo(() => {
+        if (
+            !autoFitEnabled ||
+            hasPendingImageMetadata ||
+            layout.totalWidth <= 0 ||
+            layout.totalHeight <= 0 ||
+            viewportSize.width <= 0 ||
+            viewportSize.height <= 0
+        ) {
+            return null;
+        }
+
+        const fitRatio = Math.min(
+            viewportSize.width / layout.totalWidth,
+            viewportSize.height / layout.totalHeight
+        );
+        return clamp(Math.floor(fitRatio * 100) / 100, MIN_ZOOM, MAX_AUTO_FIT_ZOOM);
+    }, [
+        autoFitEnabled,
+        hasPendingImageMetadata,
+        layout.totalHeight,
+        layout.totalWidth,
+        viewportSize.height,
+        viewportSize.width,
+    ]);
+
+    const zoom = autoFitZoom ?? manualZoom;
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -255,94 +400,197 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         })
     );
 
-    const handleDragEnd = (event) => {
-        const { active, over } = event;
-        if (!over) {
-            if (onRemove) onRemove(active.id);
+    const sortDetails = SORT_DETAILS[sortState];
+
+    const handleFileChange = (event) => {
+        const nextFiles = Array.from(event.target.files ?? []).filter((file) =>
+            file.type.startsWith('image/')
+        );
+
+        if (nextFiles.length > 0 && onAdd) {
+            onAdd(nextFiles);
+        }
+
+        event.target.value = '';
+    };
+
+    const handleZoomOut = () => {
+        const nextZoom = Math.max(MIN_ZOOM, Math.ceil((zoom * 10) - 1) / 10);
+        setManualZoom(nextZoom);
+        if (autoFitEnabled) {
+            setAutoFitEnabled(false);
+        }
+    };
+
+    const handleZoomIn = () => {
+        const nextZoom = Math.min(MAX_MANUAL_ZOOM, Math.floor((zoom * 10) + 1) / 10);
+        setManualZoom(nextZoom);
+        if (autoFitEnabled) {
+            setAutoFitEnabled(false);
+        }
+    };
+
+    const handleSort = () => {
+        if (!onUpdateImages || images.length < 2) {
             return;
         }
+
+        const nextState = sortState === 4 ? 1 : sortState + 1;
+        const nextImages = [...images];
+
+        switch (nextState) {
+            case 1:
+                nextImages.sort((a, b) => FILE_NAME_COLLATOR.compare(a.name, b.name));
+                break;
+            case 2:
+                nextImages.sort((a, b) => FILE_NAME_COLLATOR.compare(b.name, a.name));
+                break;
+            case 3:
+                nextImages.sort((a, b) => a.file.lastModified - b.file.lastModified);
+                break;
+            case 4:
+                nextImages.sort((a, b) => b.file.lastModified - a.file.lastModified);
+                break;
+            default:
+                break;
+        }
+
+        setSortState(nextState);
+        onUpdateImages(nextImages);
+    };
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+
+        if (!over) {
+            if (onRemove) {
+                onRemove(active.id);
+            }
+            return;
+        }
+
         if (active.id !== over.id) {
-            const oldIndex = loadedImages.findIndex(img => img.id === active.id);
-            const newIndex = loadedImages.findIndex(img => img.id === over.id);
-            if (onReorder) onReorder(oldIndex, newIndex);
-            // Reset sort state to custom when manually reordering
-            if (sortState !== 0) setSortState(0);
+            const oldIndex = images.findIndex((image) => image.id === active.id);
+            const newIndex = images.findIndex((image) => image.id === over.id);
+
+            if (oldIndex === -1 || newIndex === -1) {
+                return;
+            }
+
+            if (onReorder) {
+                onReorder(oldIndex, newIndex);
+            }
+
+            if (sortState !== 0) {
+                setSortState(0);
+            }
         }
     };
 
     const handleDownload = async () => {
-        // Preload all images before drawing
-        const loadedImgs = await Promise.all(
-            layout.cells.map(cell => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => resolve({ cell, img });
-                    img.onerror = () => resolve({ cell, img: null });
-                    img.src = cell.image.url;
-                });
+        const exportImages = await Promise.all(
+            images.map(async (image) => {
+                const asset = await ensureImageAsset(image);
+                return {
+                    ...image,
+                    width: asset.width,
+                    height: asset.height,
+                };
             })
         );
 
+        const exportLayout = calculateLayout(exportImages, settings);
         const canvas = document.createElement('canvas');
-        canvas.width = layout.totalWidth;
-        canvas.height = layout.totalHeight;
-        const ctx = canvas.getContext('2d');
+        canvas.width = Math.max(1, Math.round(exportLayout.totalWidth));
+        canvas.height = Math.max(1, Math.round(exportLayout.totalHeight));
 
-        // Fill Background
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return;
+        }
+
         ctx.fillStyle = settings.backgroundColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        loadedImgs.forEach(({ cell, img }) => {
-            if (!img) return;
-
-            const { x, y, width, height, imgRatio, cellRatio } = cell;
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(x, y, width, height);
-            ctx.clip();
+        exportLayout.cells.forEach((cell) => {
+            const asset = imageAssetCacheRef.current.get(cell.image.id);
+            if (!asset?.element) {
+                return;
+            }
 
             const isContain = settings.fitMode === 'max_dimensions';
-
             const { renderW, renderH } = calculateRenderDimensions({
-                cellWidth: width,
-                cellHeight: height,
-                imgRatio,
-                cellRatio,
+                cellWidth: cell.width,
+                cellHeight: cell.height,
+                imgRatio: cell.imgRatio,
+                cellRatio: cell.cellRatio,
                 isContain
             });
 
             const { renderX, renderY } = calculateRenderPosition({
-                cellWidth: width,
-                cellHeight: height,
+                cellWidth: cell.width,
+                cellHeight: cell.height,
                 renderW,
                 renderH,
                 anchor: settings.anchor
             });
 
-            ctx.drawImage(img, x + renderX, y + renderY, renderW, renderH);
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(cell.x, cell.y, cell.width, cell.height);
+            ctx.clip();
+            ctx.drawImage(asset.element, cell.x + renderX, cell.y + renderY, renderW, renderH);
             ctx.restore();
         });
 
+        const blob = await new Promise((resolve) => {
+            canvas.toBlob(resolve, 'image/png');
+        });
+
+        if (!blob) {
+            return;
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.download = `grid_combine_${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.href = downloadUrl;
         link.click();
+
+        setTimeout(() => {
+            URL.revokeObjectURL(downloadUrl);
+        }, 0);
     };
 
-    const scrollStyle = {
-        overflow: 'hidden'
+    const handleAutoFitToggle = () => {
+        if (autoFitEnabled) {
+            setManualZoom(zoom);
+            setAutoFitEnabled(false);
+            return;
+        }
+
+        setAutoFitEnabled(true);
     };
 
     return (
-        <div className="preview-component" ref={containerRef}>
+        <div className="preview-component">
             <div className="preview-toolbar">
                 <div className="zoom-controls">
-                    <button onClick={() => setZoom(z => Math.max(0.1, Math.ceil((z * 10) - 1) / 10))} title="Zoom Out (10% steps)"><ZoomOut size={16} /></button>
+                    <button
+                        onClick={handleZoomOut}
+                        title="Zoom Out (10% steps)"
+                    >
+                        <ZoomOut size={16} />
+                    </button>
                     <span className="zoom-label">{Math.round(zoom * 100)}%</span>
-                    <button onClick={() => setZoom(z => Math.min(2, Math.floor((z * 10) + 1) / 10))} title="Zoom In (10% steps)"><ZoomIn size={16} /></button>
+                    <button
+                        onClick={handleZoomIn}
+                        title="Zoom In (10% steps)"
+                    >
+                        <ZoomIn size={16} />
+                    </button>
                     <input
-                        id="add-img-input"
+                        ref={addInputRef}
                         type="file"
                         multiple
                         accept="image/*"
@@ -350,7 +598,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                         onChange={handleFileChange}
                     />
                     <button
-                        onClick={() => setAutoFitEnabled(!autoFitEnabled)}
+                        onClick={handleAutoFitToggle}
                         className={`text-btn btn-fit-screen ${autoFitEnabled ? 'active' : ''}`}
                         title={autoFitEnabled ? 'Auto Fit: ON' : 'Auto Fit: OFF'}
                         style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '8px' }}
@@ -361,16 +609,16 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                     <button
                         onClick={handleSort}
                         className={`text-btn ${sortState !== 0 ? 'active' : ''}`}
-                        title={`Sort Mode: ${getSortLabel()}`}
+                        title={`Sort Mode: ${sortDetails.label}`}
                         style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '8px' }}
                     >
-                        {getSortIcon()}
-                        <span className="mobile-hide">{getSortLabel()}</span>
+                        <sortDetails.Icon size={16} />
+                        <span className="mobile-hide">{sortDetails.label}</span>
                     </button>
                 </div>
                 <div className="toolbar-actions">
                     <button
-                        onClick={() => document.getElementById('add-img-input').click()}
+                        onClick={() => addInputRef.current?.click()}
                         className="btn-tertiary"
                         title="Add Images"
                     >
@@ -381,44 +629,50 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                     </button>
                 </div>
             </div>
-            <div className="canvas-scroll-area" ref={scrollAreaRef} style={scrollStyle}>
-                <div
-                    className="scaling-container"
-                    style={{
-                        width: layout.totalWidth * zoom,
-                        height: layout.totalHeight * zoom,
-                        position: 'relative'
-                    }}
-                >
+            <div className="canvas-scroll-area" ref={scrollAreaRef}>
+                {hasPendingImageMetadata ? (
+                    <div className="preview-loading">
+                        <span>Loading image dimensions...</span>
+                    </div>
+                ) : (
                     <div
-                        className="canvas-wrapper dom-grid"
+                        className="scaling-container"
                         style={{
-                            width: layout.totalWidth,
-                            height: layout.totalHeight,
-                            transform: `scale(${zoom})`,
-                            transformOrigin: '0 0',
-                            backgroundColor: settings.backgroundColor,
-                            position: 'absolute',
-                            top: 0,
-                            left: 0
+                            width: layout.totalWidth * zoom,
+                            height: layout.totalHeight * zoom,
+                            position: 'relative'
                         }}
                     >
-                        <DndContext
-                            sensors={sensors}
-                            collisionDetection={rectIntersection}
-                            onDragEnd={handleDragEnd}
+                        <div
+                            className="canvas-wrapper dom-grid"
+                            style={{
+                                width: layout.totalWidth,
+                                height: layout.totalHeight,
+                                transform: `scale(${zoom})`,
+                                transformOrigin: '0 0',
+                                backgroundColor: settings.backgroundColor,
+                                position: 'absolute',
+                                top: 0,
+                                left: 0
+                            }}
                         >
-                            <SortableContext
-                                items={loadedImages.map(img => img.id)}
-                                strategy={rectSortingStrategy}
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={rectIntersection}
+                                onDragEnd={handleDragEnd}
                             >
-                                {layout.cells.map((cell) => (
-                                    <SortableItem key={cell.image.id} id={cell.image.id} cell={cell} />
-                                ))}
-                            </SortableContext>
-                        </DndContext>
+                                <SortableContext
+                                    items={images.map((image) => image.id)}
+                                    strategy={rectSortingStrategy}
+                                >
+                                    {layout.cells.map((cell) => (
+                                        <SortableItem key={cell.image.id} id={cell.image.id} cell={cell} />
+                                    ))}
+                                </SortableContext>
+                            </DndContext>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
