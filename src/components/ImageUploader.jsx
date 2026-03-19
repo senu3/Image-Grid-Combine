@@ -92,6 +92,7 @@ export default function ImageUploader({ onUpload }) {
                     type="file"
                     directory=""
                     webkitdirectory=""
+                    accept="image/*"
                     ref={folderInputRef}
                     className="hidden-input"
                     onChange={handleFileChange}

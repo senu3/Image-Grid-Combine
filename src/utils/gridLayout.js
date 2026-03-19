@@ -65,6 +65,13 @@ export function calculateLayout(images, settings) {
                 rowHeights.push(maxH);
             }
 
+            const rowOffsets = [];
+            let currentOffset = 0;
+            for (let r = 0; r < numRows; r++) {
+                rowOffsets.push(currentOffset);
+                currentOffset += rowHeights[r] + gap;
+            }
+
             // 3. Calculate Total Height
             totalHeight = rowHeights.reduce((sum, h) => sum + h, 0) + (Math.max(0, numRows - 1) * gap);
 
@@ -72,18 +79,13 @@ export function calculateLayout(images, settings) {
             const cells = images.map((img, i) => {
                 const r = Math.floor(i / numCols);
                 const c = i % numCols;
-
-                // Y position is sum of previous row heights + gaps
-                let y = 0;
-                for (let k = 0; k < r; k++) y += rowHeights[k] + gap;
-
                 const x = c * (cellWidth + gap);
 
                 // Content matches cell exactly
                 return {
                     image: img,
                     x,
-                    y: y + (rowHeights[r] - cellDims[i].h) / 2, // Center vertically in the row? Or top align? Let's Center.
+                    y: rowOffsets[r] + (rowHeights[r] - cellDims[i].h) / 2,
                     width: cellWidth,
                     height: cellDims[i].h,
                     imgRatio: img.width / img.height,
@@ -122,7 +124,6 @@ export function calculateLayout(images, settings) {
 
             images.forEach((img, i) => {
                 const r = Math.floor(i / numCols);
-                const c = i % numCols;
 
                 // Calculate X based on previous items in this row
                 let x = 0;

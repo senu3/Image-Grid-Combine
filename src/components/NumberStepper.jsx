@@ -1,6 +1,6 @@
 import { Minus, Plus } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import './ControlPanel.css'; // Re-use styles or creating new ones
+import './ControlPanel.css';
 
 export default function NumberStepper({ value, onChange, min = 0, max = 100, step = 1, name }) {
     const intervalRef = useRef(null);
@@ -33,16 +33,8 @@ export default function NumberStepper({ value, onChange, min = 0, max = 100, ste
     const handleInputChange = (e) => {
         const newValue = parseInt(e.target.value, 10);
         if (!isNaN(newValue)) {
-            // Respect formatting but allow free typing? 
-            // To prevent jumps while typing, maybe just pass raw if possible?
-            // But prop implies 'value' is number. 
-            // Let's pass it up. Parent handles state.
             onChange({ target: { name, value: newValue, type: 'number' } });
         } else if (e.target.value === '') {
-            // Handle empty string if desired, or ignore.
-            // For now passing 0 or keeping previous might be safer but user wants free input.
-            // If we pass 0 it might be annoying. 
-            // Let's assume onBlur handles defaults or just pass 0.
             onChange({ target: { name, value: 0, type: 'number' } });
         }
     };
@@ -64,6 +56,9 @@ export default function NumberStepper({ value, onChange, min = 0, max = 100, ste
                 value={value}
                 onChange={handleInputChange}
                 name={name}
+                min={min}
+                max={max}
+                step={step}
             />
             <button
                 className="stepper-btn"

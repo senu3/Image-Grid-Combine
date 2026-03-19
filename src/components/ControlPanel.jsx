@@ -32,12 +32,6 @@ export default function ControlPanel({ settings, onSettingsChange, isOpen = true
                     <span className="handle-label">Settings</span>
                 </div>
             </div>
-            {/* ... tabs ... */}
-            {/* ... rest of component ... */}
-            {/* I need to make sure I am replacing the right block or just targeting handleChange */}
-            {/* Wait, replace_file_content works on chunks. I should target just handleChange and then Gap slider separately or together if close. */}
-            {/* They are far apart. I will do handleChange first. */}
-
             <div className="mobile-tabs">
                 <button
                     className={`tab-btn ${activeTab === 'layout' ? 'active' : ''}`}

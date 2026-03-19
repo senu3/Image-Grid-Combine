@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react'
-import { Menu, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ImageUploader from './components/ImageUploader'
 import ControlPanel from './components/ControlPanel'
 import PreviewCanvas from './components/PreviewCanvas'
 import './App.css'
 
+const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 768
+
 function App() {
-  const [images, setImages] = useState([]);
-  // モバイルでは閉じた状態、デスクトップでは開いた状態で開始
+  const [images, setImages] = useState([])
+  const imagesRef = useRef(images)
   const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
-    return typeof window !== 'undefined' && window.innerWidth >= 768;
-  });
+    return !isMobileViewport()
+  })
 
   const [settings, setSettings] = useState({
     mode: 'width_col', // 'width_col' or 'height_row'
@@ -22,68 +23,72 @@ function App() {
     backgroundColor: '#ffffff',
     fitMode: 'average', // 'average', 'portrait', 'landscape'
     anchor: 'center' // 'top-left', 'top-center', 'top-right', ... 'center' ...
-  });
+  })
 
-  const handleUpdateImages = (newImages) => {
-    setImages(newImages);
-  };
+  useEffect(() => {
+    imagesRef.current = images
+  }, [images])
 
-  const handleUpload = (files) => {
-    // Create preview URLs
-    const newImages = files.map(file => ({
+  useEffect(() => {
+    return () => {
+      imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url))
+    }
+  }, [])
+
+  const updateImages = useCallback((updater) => {
+    setImages((currentImages) => {
+      const nextImages = typeof updater === 'function' ? updater(currentImages) : updater
+      const nextIds = new Set(nextImages.map((image) => image.id))
+
+      currentImages.forEach((image) => {
+        if (!nextIds.has(image.id)) {
+          URL.revokeObjectURL(image.url)
+        }
+      })
+
+      return nextImages
+    })
+  }, [])
+
+  const handleUpload = useCallback((files) => {
+    const newImages = files.map((file) => ({
       file,
       id: crypto.randomUUID(),
       url: URL.createObjectURL(file), // For preview
       name: file.name
-    }));
+    }))
 
-    setImages(prev => [...prev, ...newImages]);
+    updateImages((currentImages) => [...currentImages, ...newImages])
 
-    // Auto-hide settings on mobile after upload
-    if (window.innerWidth < 768) {
-      setIsSettingsOpen(false);
+    if (isMobileViewport()) {
+      setIsSettingsOpen(false)
     }
-  };
+  }, [updateImages])
 
-  const clearImages = () => {
-    images.forEach(img => URL.revokeObjectURL(img.url));
-    setImages([]);
-    // Open settings when cleared?
-    if (window.innerWidth < 768) {
-      setIsSettingsOpen(true);
+  const clearImages = useCallback(() => {
+    updateImages([])
+
+    if (isMobileViewport()) {
+      setIsSettingsOpen(true)
     }
-  };
+  }, [updateImages])
 
-  const handleReorder = (oldIndex, newIndex) => {
-    setImages((items) => {
-      const newItems = [...items];
-      const [removed] = newItems.splice(oldIndex, 1);
-      newItems.splice(newIndex, 0, removed);
-      return newItems;
-    });
-  };
-
-  const handleRemove = (id) => {
-    setImages((items) => {
-      const itemObj = items.find(i => i.id === id);
-      if (itemObj) URL.revokeObjectURL(itemObj.url);
-      return items.filter(i => i.id !== id);
-    });
-  };
-
-  // モバイルで画像がある時は設定パネルを閉じる
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768 && images.length > 0) {
-      setIsSettingsOpen(false);
+  const handleReorder = useCallback((oldIndex, newIndex) => {
+    if (oldIndex === newIndex) {
+      return
     }
-  }, [images.length]);
 
-  // Cleanup URLs on unmount
-  useEffect(() => {
-    return () => {
-      images.forEach(img => URL.revokeObjectURL(img.url));
-    };
-  }, []);
+    updateImages((currentImages) => {
+      const nextImages = [...currentImages]
+      const [movedImage] = nextImages.splice(oldIndex, 1)
+      nextImages.splice(newIndex, 0, movedImage)
+      return nextImages
+    })
+  }, [updateImages])
+
+  const handleRemove = useCallback((id) => {
+    updateImages((currentImages) => currentImages.filter((image) => image.id !== id))
+  }, [updateImages])
 
   return (
     <div className="app-container">
@@ -103,7 +108,7 @@ function App() {
             settings={settings}
             onSettingsChange={setSettings}
             isOpen={isSettingsOpen}
-            onToggle={() => setIsSettingsOpen(!isSettingsOpen)}
+            onToggle={() => setIsSettingsOpen((currentValue) => !currentValue)}
           />
         </div>
         <div className="content-area">
@@ -119,7 +124,7 @@ function App() {
                 onReorder={handleReorder}
                 onRemove={handleRemove}
                 onAdd={handleUpload}
-                onUpdateImages={handleUpdateImages}
+                onUpdateImages={updateImages}
               />
             </div>
           )}
