@@ -91,7 +91,7 @@ function App() {
   }, [updateImages])
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isSettingsOpen ? 'settings-open' : 'settings-closed'}`}>
       <header className="app-header">
         <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <h1>Image Grid Combine</h1>

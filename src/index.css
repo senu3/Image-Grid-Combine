@@ -8,6 +8,43 @@
   --accent-hover: #535bf2;
   --border-color: #27272a;
   --input-bg: #27272a;
+  --app-header-height: 60px;
+  --mobile-viewport-height: 100vh;
+  --mobile-stack-gap: 4px;
+  --mobile-action-bar-padding-x: 1rem;
+  --mobile-action-bar-padding-top: 0.75rem;
+  --mobile-action-bar-padding-bottom: 0.75rem;
+  --mobile-action-bar-button-height: 44px;
+  --mobile-action-bar-height: calc(
+    var(--mobile-action-bar-button-height) +
+    var(--mobile-action-bar-padding-top) +
+    var(--mobile-action-bar-padding-bottom)
+  );
+  --mobile-sheet-handle-height: 34px;
+  --mobile-preview-min-height: 240px;
+  --mobile-preview-preferred-height: 45vh;
+  --mobile-preview-expanded-height: calc(
+    var(--mobile-viewport-height) -
+    var(--app-header-height) -
+    var(--mobile-action-bar-height) -
+    var(--mobile-sheet-handle-height) -
+    (var(--mobile-stack-gap) * 2)
+  );
+  --mobile-preview-height: clamp(
+    var(--mobile-preview-min-height),
+    var(--mobile-preview-preferred-height),
+    var(--mobile-preview-expanded-height)
+  );
+  --mobile-sheet-max-height: max(
+    180px,
+    calc(
+      var(--mobile-viewport-height) -
+      var(--app-header-height) -
+      var(--mobile-action-bar-height) -
+      var(--mobile-preview-height) -
+      var(--mobile-stack-gap)
+    )
+  );
 }
 
 body {
@@ -63,4 +100,11 @@ input, select {
 
 input:focus, select:focus {
   border-color: var(--accent-color);
+}
+
+@media (max-width: 768px) {
+  :root {
+    --mobile-viewport-height: 100dvh;
+    --mobile-action-bar-padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
 }

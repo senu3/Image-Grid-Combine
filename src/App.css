@@ -7,7 +7,7 @@
 }
 
 .app-header {
-    height: 60px;
+    height: var(--app-header-height);
     flex-shrink: 0;
     padding: 0 2rem;
     background-color: var(--panel-bg);
@@ -123,26 +123,23 @@
 
     /* Mobile Layout: Preview Top, Settings Bottom */
     .content-area {
-        height: 45vh;
-        /* Fixed height for preview */
+        height: var(--mobile-preview-height);
         flex: none;
         order: 1;
-        /* Preview first */
         min-height: 0;
+    }
+
+    .app-container.settings-closed .content-area {
+        height: var(--mobile-preview-expanded-height);
     }
 
     .sidebar {
         width: 100%;
         order: 2;
-        /* Settings second */
         border-right: none;
-        border-top: 1px solid var(--border-color);
-        /* Note: ControlPanel itself uses position: fixed in mobile, sidebar is just wrapper */
         height: auto;
         overflow: visible;
-        /* Allow ControlPanel to overflow */
         background-color: transparent;
         z-index: auto;
-        /* ControlPanel manages its own z-index */
     }
 }

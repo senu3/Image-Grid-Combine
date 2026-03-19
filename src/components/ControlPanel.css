@@ -221,16 +221,14 @@
         padding: 0;
         gap: 0;
         height: auto;
-        /* max-height: 60vh; Removed duplicate */
-        max-height: calc(85vh - 70px);
+        max-height: var(--mobile-sheet-max-height);
         overflow: hidden;
         display: flex;
         flex-direction: column;
         background-color: var(--panel-bg);
 
         position: fixed;
-        bottom: 74px;
-        /* Above footer (assumed ~70px) */
+        bottom: calc(var(--mobile-action-bar-height) + var(--mobile-stack-gap));
         left: 0;
         right: 0;
         z-index: 1002;
@@ -241,8 +239,7 @@
     }
 
     .control-panel.closed {
-        transform: translateY(calc(100% - 34px));
-        /* Show just the handle (34px) */
+        transform: translateY(calc(100% - var(--mobile-sheet-handle-height)));
     }
 
     .control-panel.open {
@@ -250,7 +247,7 @@
     }
 
     .panel-handle {
-        height: 34px;
+        height: var(--mobile-sheet-handle-height);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -270,7 +267,6 @@
         letter-spacing: 0.05em;
     }
 
-    /* Remove old knob */
     .panel-knob {
         display: none;
     }
@@ -286,11 +282,8 @@
 
     .section {
         display: none;
-        /* Hidden by default, controlled by React state */
         padding: 1rem;
-        /* Adjust padding for short screens/mobile */
-        padding-bottom: 90px;
-        /* Space for fixed bottom bar + extra buffer */
+        padding-bottom: 1.25rem;
         height: 100%;
         overflow-y: auto;
     }
@@ -301,6 +294,5 @@
 
     .section h3 {
         display: flex;
-        /* Revert to flex or block. */
     }
 }

@@ -157,20 +157,14 @@ button:focus-visible {
 
 @media (max-width: 768px) {
     .preview-toolbar {
-        /* On mobile, toolbar only contains Zoom/Sort controls? 
-           User said: Preview at top.
-           We can keep some controls there.
-        */
         height: 48px;
         padding: 0 0.5rem;
     }
 
-    /* Hide "Fit Screen" button text or button entirely? User said hide button. */
     .btn-fit-screen {
         display: none !important;
     }
 
-    /* Move Add/Save to bottom fixed bar */
     .toolbar-actions {
         position: fixed;
         bottom: 0;
@@ -178,27 +172,24 @@ button:focus-visible {
         right: 0;
         background-color: var(--panel-bg);
         border-top: 1px solid var(--border-color);
-        padding: 0.75rem 1rem;
-        height: 70px;
-        /* Explicit height for positioning calculations */
+        padding:
+            var(--mobile-action-bar-padding-top)
+            var(--mobile-action-bar-padding-x)
+            var(--mobile-action-bar-padding-bottom);
+        min-height: var(--mobile-action-bar-height);
         box-sizing: border-box;
         z-index: 1001;
-        /* Above sidebar */
         justify-content: space-between;
         gap: 1rem;
+        align-items: stretch;
     }
 
     .toolbar-actions button {
         flex: 1;
         justify-content: center;
-        height: 44px;
+        min-height: var(--mobile-action-bar-button-height);
+        padding: 0.5rem 0.75rem;
     }
-
-    /* Adjust padding for scroll area so content isn't hidden behind fixed bar if it were overlaying? 
-       Actually layout is: Preview (45vh) | Settings (flex). 
-       The fixed buttons will overlay the bottom of Settings.
-       We should add padding-bottom to sidebar/settings area so buttons don't cover content.
-    */
 
     .zoom-controls {
         gap: 0.25rem;
