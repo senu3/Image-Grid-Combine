@@ -161,7 +161,7 @@ function imageAssetsReducer(state, action) {
     }
 }
 
-function SortableItem({ id, cell }) {
+function SortableItem({ id, cell, zoom }) {
     const {
         attributes,
         listeners,
@@ -171,8 +171,16 @@ function SortableItem({ id, cell }) {
         isDragging
     } = useSortable({ id });
 
+    const adjustedTransform = transform
+        ? {
+            ...transform,
+            x: transform.x / zoom,
+            y: transform.y / zoom,
+        }
+        : null;
+
     const combinedStyle = {
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Transform.toString(adjustedTransform),
         transition,
         position: 'absolute',
         left: cell.x,
@@ -666,7 +674,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                                     strategy={rectSortingStrategy}
                                 >
                                     {layout.cells.map((cell) => (
-                                        <SortableItem key={cell.image.id} id={cell.image.id} cell={cell} />
+                                        <SortableItem key={cell.image.id} id={cell.image.id} cell={cell} zoom={zoom} />
                                     ))}
                                 </SortableContext>
                             </DndContext>
