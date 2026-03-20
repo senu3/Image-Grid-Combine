@@ -30,3 +30,7 @@ https://github.com/user-attachments/assets/8835ed65-dc79-4dd5-ad29-455979e4ff8d
     - **Anchor Point**: Match Portraitモードなどのボックスからはみ出た画像の切り抜き位置、Max Dimensionsモード時の余白ができる際の画像の配置位置（中央、右下など）を指定可能。
 - **ズーム機能**: 画面に合わせてプレビューを拡大縮小（Fit Screenでウィンドウサイズに自動調整）。
 - **画像の保存**: 結合した画像をpng形式で保存。
+
+## 開発メモ
+
+- メンテナンス時の内部仕様メモは [docs/maintenance.md](docs/maintenance.md) を参照してください。
