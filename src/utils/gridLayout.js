@@ -116,6 +116,7 @@ export function calculateLayout(images, settings) {
             // 2. Position Cells
             const cells = [];
             const rowWidths = Array(numRows).fill(0);
+            const rowXOffsets = Array(numRows).fill(0);
 
             // We need to distribute images. Standard grid logic: filled column by column or row by row?
             // Previous logic: `const r = Math.floor(i / numCols);` -> Row by row.
@@ -124,14 +125,7 @@ export function calculateLayout(images, settings) {
 
             images.forEach((img, i) => {
                 const r = Math.floor(i / numCols);
-
-                // Calculate X based on previous items in this row
-                let x = 0;
-                const rowStartIndex = r * numCols;
-                // Sum widths of previous items in this row
-                for (let k = rowStartIndex; k < i; k++) {
-                    x += cellDims[k].w + gap;
-                }
+                const x = rowXOffsets[r];
 
                 const y = r * (cellHeight + gap);
 
@@ -150,6 +144,7 @@ export function calculateLayout(images, settings) {
 
                 // Track max width
                 rowWidths[r] = Math.max(rowWidths[r], x + w);
+                rowXOffsets[r] = x + w + gap;
             });
 
             totalWidth = Math.max(...rowWidths);

@@ -50,10 +50,34 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const IMAGE_BITMAP_TIMEOUT_MS = 1500;
 const IMAGE_LOAD_TIMEOUT_MS = 5000;
 
-function loadImageElement(image) {
+function disposeImageAsset(asset) {
+    const drawable = asset?.drawable;
+    if (!drawable) {
+        return;
+    }
+
+    if (typeof ImageBitmap !== 'undefined' && drawable instanceof ImageBitmap) {
+        drawable.close();
+        return;
+    }
+
+    if (typeof HTMLImageElement !== 'undefined' && drawable instanceof HTMLImageElement) {
+        drawable.onload = null;
+        drawable.onerror = null;
+        drawable.src = '';
+    }
+}
+
+function loadImageElement(image, signal) {
     return new Promise((resolve) => {
         const element = new Image();
         let settled = false;
+        let timeoutId = null;
+
+        const handleAbort = () => {
+            element.src = '';
+            finalize(null);
+        };
 
         const finalize = (value) => {
             if (settled) {
@@ -61,69 +85,121 @@ function loadImageElement(image) {
             }
 
             settled = true;
-            window.clearTimeout(timeoutId);
+            if (timeoutId !== null) {
+                window.clearTimeout(timeoutId);
+            }
             element.onload = null;
             element.onerror = null;
+            signal?.removeEventListener('abort', handleAbort);
             resolve(value);
         };
+
+        if (signal?.aborted) {
+            resolve(null);
+            return;
+        }
 
         element.decoding = 'async';
         element.onload = () => finalize(element);
         element.onerror = () => finalize(null);
-        const timeoutId = window.setTimeout(() => finalize(null), IMAGE_LOAD_TIMEOUT_MS);
+        signal?.addEventListener('abort', handleAbort, { once: true });
+        timeoutId = window.setTimeout(() => finalize(null), IMAGE_LOAD_TIMEOUT_MS);
         element.src = image.url;
     });
 }
 
-async function loadImageDimensions(image, element) {
-    const fallbackDimensions = {
-        width: element?.naturalWidth || element?.width || 100,
-        height: element?.naturalHeight || element?.height || 100,
-    };
+function loadImageBitmap(image, signal) {
+    return new Promise((resolve, reject) => {
+        let settled = false;
+        let didTimeout = false;
+        let timeoutId = null;
 
+        const handleAbort = () => {
+            finalize(() => resolve(null));
+        };
+
+        const finalize = (callback) => {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            if (timeoutId !== null) {
+                window.clearTimeout(timeoutId);
+            }
+            signal?.removeEventListener('abort', handleAbort);
+            callback();
+        };
+
+        if (signal?.aborted) {
+            resolve(null);
+            return;
+        }
+
+        signal?.addEventListener('abort', handleAbort, { once: true });
+        timeoutId = window.setTimeout(() => {
+            didTimeout = true;
+            finalize(() => resolve(null));
+        }, IMAGE_BITMAP_TIMEOUT_MS);
+
+        createImageBitmap(image.file, {
+            imageOrientation: 'from-image',
+        }).then((bitmap) => {
+            if (signal?.aborted || didTimeout || settled) {
+                bitmap.close();
+                return;
+            }
+
+            finalize(() => resolve({
+                drawable: bitmap,
+                width: bitmap.width || 100,
+                height: bitmap.height || 100,
+                status: 'ready',
+            }));
+        }).catch((error) => {
+            if (signal?.aborted || settled) {
+                return;
+            }
+
+            finalize(() => reject(error));
+        });
+    });
+}
+
+async function loadImageAsset(image, signal) {
     if (typeof createImageBitmap === 'function' && image.file instanceof Blob) {
         try {
-            const bitmap = await Promise.race([
-                createImageBitmap(image.file, {
-                    imageOrientation: 'from-image',
-                }),
-                new Promise((_, reject) => {
-                    window.setTimeout(() => {
-                        reject(new Error('createImageBitmap timed out'));
-                    }, IMAGE_BITMAP_TIMEOUT_MS);
-                }),
-            ]);
-            const dimensions = {
-                width: bitmap.width || fallbackDimensions.width,
-                height: bitmap.height || fallbackDimensions.height,
-            };
-            bitmap.close();
-            return dimensions;
+            const bitmapAsset = await loadImageBitmap(image, signal);
+            if (bitmapAsset || signal?.aborted) {
+                return bitmapAsset;
+            }
         } catch {
-            // Fall through to the HTMLImageElement dimensions below.
+            // Fall through to the HTMLImageElement path below.
         }
     }
 
-    return fallbackDimensions;
-}
+    if (signal?.aborted) {
+        return null;
+    }
 
-async function loadImageAsset(image) {
-    const element = await loadImageElement(image);
+    const element = await loadImageElement(image, signal);
     if (!element) {
+        if (signal?.aborted) {
+            return null;
+        }
+
         return {
-            element: null,
+            drawable: null,
             width: 100,
             height: 100,
             status: 'error',
         };
     }
 
-    const dimensions = await loadImageDimensions(image, element);
-
     return {
-        element,
-        width: dimensions.width,
-        height: dimensions.height,
+        drawable: element,
+        width: element.naturalWidth || element.width || 100,
+        height: element.naturalHeight || element.height || 100,
         status: 'ready',
     };
 }
@@ -161,6 +237,27 @@ function imageAssetsReducer(state, action) {
     }
 }
 
+function getCellImagePlacement(cell, anchor = cell.settings.anchor) {
+    const isContain = cell.settings.fitMode === 'max_dimensions';
+    const { renderW, renderH } = calculateRenderDimensions({
+        cellWidth: cell.width,
+        cellHeight: cell.height,
+        imgRatio: cell.imgRatio,
+        cellRatio: cell.cellRatio,
+        isContain
+    });
+
+    const { renderX, renderY } = calculateRenderPosition({
+        cellWidth: cell.width,
+        cellHeight: cell.height,
+        renderW,
+        renderH,
+        anchor
+    });
+
+    return { renderW, renderH, renderX, renderY };
+}
+
 function SortableItem({ id, cell, zoom }) {
     const {
         attributes,
@@ -193,23 +290,7 @@ function SortableItem({ id, cell, zoom }) {
         opacity: isDragging ? 0.8 : 1,
     };
 
-    const isContain = cell.settings.fitMode === 'max_dimensions';
-
-    const { renderW, renderH } = calculateRenderDimensions({
-        cellWidth: cell.width,
-        cellHeight: cell.height,
-        imgRatio: cell.imgRatio,
-        cellRatio: cell.cellRatio,
-        isContain
-    });
-
-    const { renderX, renderY } = calculateRenderPosition({
-        cellWidth: cell.width,
-        cellHeight: cell.height,
-        renderW,
-        renderH,
-        anchor: cell.settings.anchor
-    });
+    const { renderW, renderH, renderX, renderY } = getCellImagePlacement(cell);
 
     return (
         <div ref={setNodeRef} style={combinedStyle} {...attributes} {...listeners} className="grid-cell">
@@ -239,6 +320,7 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
     const activeImageIdsRef = useRef(new Set());
     const imageAssetCacheRef = useRef(new Map());
     const imageLoadPromisesRef = useRef(new Map());
+    const imageLoadControllersRef = useRef(new Map());
 
     const [manualZoom, setManualZoom] = useState(0.5);
     const [sortState, setSortState] = useState(0);
@@ -248,8 +330,17 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
 
     useEffect(() => {
         isMountedRef.current = true;
+        const imageLoadControllers = imageLoadControllersRef.current;
+        const imageLoadPromises = imageLoadPromisesRef.current;
+        const imageAssetCache = imageAssetCacheRef.current;
+
         return () => {
             isMountedRef.current = false;
+            imageLoadControllers.forEach((controller) => controller.abort());
+            imageLoadControllers.clear();
+            imageLoadPromises.clear();
+            imageAssetCache.forEach((asset) => disposeImageAsset(asset));
+            imageAssetCache.clear();
         };
     }, []);
 
@@ -264,13 +355,23 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
             return pendingAsset;
         }
 
-        const loadPromise = loadImageAsset(image).then((asset) => {
-            imageLoadPromisesRef.current.delete(image.id);
+        const controller = new AbortController();
+        imageLoadControllersRef.current.set(image.id, controller);
 
-            if (!activeImageIdsRef.current.has(image.id)) {
-                return asset;
+        const loadPromise = loadImageAsset(image, controller.signal).then((asset) => {
+            if (!asset) {
+                return null;
             }
 
+            if (!activeImageIdsRef.current.has(image.id)) {
+                disposeImageAsset(asset);
+                return null;
+            }
+
+            const previousAsset = imageAssetCacheRef.current.get(image.id);
+            if (previousAsset && previousAsset !== asset) {
+                disposeImageAsset(previousAsset);
+            }
             imageAssetCacheRef.current.set(image.id, asset);
 
             if (isMountedRef.current) {
@@ -278,6 +379,9 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
             }
 
             return asset;
+        }).finally(() => {
+            imageLoadPromisesRef.current.delete(image.id);
+            imageLoadControllersRef.current.delete(image.id);
         });
 
         imageLoadPromisesRef.current.set(image.id, loadPromise);
@@ -289,14 +393,17 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
         activeImageIdsRef.current = nextActiveIds;
         dispatchImageAssets({ type: 'prune', activeIds: nextActiveIds });
 
-        for (const id of imageAssetCacheRef.current.keys()) {
+        for (const [id, asset] of imageAssetCacheRef.current.entries()) {
             if (!nextActiveIds.has(id)) {
+                disposeImageAsset(asset);
                 imageAssetCacheRef.current.delete(id);
             }
         }
 
-        for (const id of imageLoadPromisesRef.current.keys()) {
+        for (const [id, controller] of imageLoadControllersRef.current.entries()) {
             if (!nextActiveIds.has(id)) {
+                controller.abort();
+                imageLoadControllersRef.current.delete(id);
                 imageLoadPromisesRef.current.delete(id);
             }
         }
@@ -501,11 +608,15 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
                 const asset = await ensureImageAsset(image);
                 return {
                     ...image,
-                    width: asset.width,
-                    height: asset.height,
+                    width: asset?.width ?? null,
+                    height: asset?.height ?? null,
                 };
             })
         );
+
+        if (exportImages.some((image) => image.width == null || image.height == null)) {
+            return;
+        }
 
         const exportLayout = calculateLayout(exportImages, settings);
         const canvas = document.createElement('canvas');
@@ -522,32 +633,17 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
 
         exportLayout.cells.forEach((cell) => {
             const asset = imageAssetCacheRef.current.get(cell.image.id);
-            if (!asset?.element) {
+            if (!asset?.drawable) {
                 return;
             }
 
-            const isContain = settings.fitMode === 'max_dimensions';
-            const { renderW, renderH } = calculateRenderDimensions({
-                cellWidth: cell.width,
-                cellHeight: cell.height,
-                imgRatio: cell.imgRatio,
-                cellRatio: cell.cellRatio,
-                isContain
-            });
-
-            const { renderX, renderY } = calculateRenderPosition({
-                cellWidth: cell.width,
-                cellHeight: cell.height,
-                renderW,
-                renderH,
-                anchor: settings.anchor
-            });
+            const { renderW, renderH, renderX, renderY } = getCellImagePlacement(cell, settings.anchor);
 
             ctx.save();
             ctx.beginPath();
             ctx.rect(cell.x, cell.y, cell.width, cell.height);
             ctx.clip();
-            ctx.drawImage(asset.element, cell.x + renderX, cell.y + renderY, renderW, renderH);
+            ctx.drawImage(asset.drawable, cell.x + renderX, cell.y + renderY, renderW, renderH);
             ctx.restore();
         });
 
