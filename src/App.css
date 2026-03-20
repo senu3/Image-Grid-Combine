@@ -31,6 +31,10 @@
     min-height: 0;
 }
 
+.mobile-quick-layout-bar {
+    display: none;
+}
+
 .sidebar {
     width: 300px;
     background-color: var(--panel-bg);
@@ -117,27 +121,81 @@
         padding: 0 1rem;
     }
 
+    .mobile-quick-layout-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background-color: var(--panel-bg);
+        border-bottom: 1px solid var(--border-color);
+        min-height: var(--mobile-quick-bar-height);
+        box-sizing: border-box;
+    }
+
+    .mobile-layout-controls {
+        flex: 1;
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(132px, 0.8fr);
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .mobile-mode-selector {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        background-color: var(--input-bg);
+        border-radius: 10px;
+        min-width: 0;
+    }
+
+    .mobile-mode-selector .mode-btn {
+        min-width: 0;
+        font-size: 0.78rem;
+    }
+
+    .mobile-count-control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        min-width: 0;
+    }
+
+    .mobile-count-label {
+        display: none;
+    }
+
+    .mobile-count-control .number-stepper {
+        min-width: 0;
+    }
+
+    .mobile-settings-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        min-height: 40px;
+        padding: 0.55rem 0.8rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
     .app-main {
         flex-direction: column;
     }
 
-    /* Mobile Layout: Preview Top, Settings Bottom */
     .content-area {
-        height: var(--mobile-preview-height);
-        flex: none;
+        flex: 1;
         order: 1;
         min-height: 0;
-    }
-
-    .app-container.settings-closed .content-area {
-        height: var(--mobile-preview-expanded-height);
     }
 
     .sidebar {
         width: 100%;
         order: 2;
         border-right: none;
-        height: auto;
+        height: 0;
         overflow: visible;
         background-color: transparent;
         z-index: auto;

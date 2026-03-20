@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { SlidersHorizontal } from 'lucide-react'
 import ImageUploader from './components/ImageUploader'
 import ControlPanel from './components/ControlPanel'
 import PreviewCanvas from './components/PreviewCanvas'
+import NumberStepper from './components/NumberStepper'
 import './App.css'
 
 const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 768
@@ -90,6 +92,20 @@ function App() {
     updateImages((currentImages) => currentImages.filter((image) => image.id !== id))
   }, [updateImages])
 
+  const handleSettingsChange = useCallback((nextSettings) => {
+    setSettings(nextSettings)
+  }, [])
+
+  const handleSettingInputChange = useCallback((e) => {
+    const { name, value, type } = e.target
+    const isNumber = type === 'number' || type === 'range'
+
+    setSettings((currentSettings) => ({
+      ...currentSettings,
+      [name]: isNumber ? parseInt(value, 10) || 0 : value
+    }))
+  }, [])
+
   return (
     <div className={`app-container ${isSettingsOpen ? 'settings-open' : 'settings-closed'}`}>
       <header className="app-header">
@@ -102,11 +118,46 @@ function App() {
           </button>
         </div>
       </header>
+      <div className="mobile-quick-layout-bar">
+        <div className="mobile-layout-controls">
+          <div className="mobile-mode-selector">
+            <button
+              className={`mode-btn ${settings.mode === 'width_col' ? 'active' : ''}`}
+              onClick={() => handleSettingsChange({ ...settings, mode: 'width_col' })}
+            >
+              Width × Col
+            </button>
+            <button
+              className={`mode-btn ${settings.mode === 'height_row' ? 'active' : ''}`}
+              onClick={() => handleSettingsChange({ ...settings, mode: 'height_row' })}
+            >
+              Height × Row
+            </button>
+          </div>
+          <div className="mobile-count-control">
+            <span className="mobile-count-label">
+              {settings.mode === 'width_col' ? 'Columns' : 'Rows'}
+            </span>
+            <NumberStepper
+              name={settings.mode === 'width_col' ? 'cols' : 'rows'}
+              value={settings.mode === 'width_col' ? settings.cols : settings.rows}
+              onChange={handleSettingInputChange}
+              min={1}
+              max={100}
+            />
+          </div>
+        </div>
+        <button className="mobile-settings-trigger" onClick={() => setIsSettingsOpen(true)}>
+          <SlidersHorizontal size={16} />
+          <span>More</span>
+        </button>
+      </div>
       <main className="app-main">
         <div className="sidebar">
           <ControlPanel
             settings={settings}
-            onSettingsChange={setSettings}
+            onSettingsChange={handleSettingsChange}
+            onInputChange={handleSettingInputChange}
             isOpen={isSettingsOpen}
             onToggle={() => setIsSettingsOpen((currentValue) => !currentValue)}
           />
