@@ -11,6 +11,10 @@ const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidt
 function App() {
   const [images, setImages] = useState([])
   const imagesRef = useRef(images)
+  const [hasMixedAspectRatios, setHasMixedAspectRatios] = useState(false)
+  const [isImageFitToastVisible, setIsImageFitToastVisible] = useState(false)
+  const imageFitToastTimeoutRef = useRef(null)
+  const previousHasMixedAspectRatiosRef = useRef(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
     return !isMobileViewport()
   })
@@ -32,9 +36,31 @@ function App() {
   }, [images])
 
   useEffect(() => {
+    if (images.length === 0) {
+      previousHasMixedAspectRatiosRef.current = false
+    }
+  }, [images.length])
+
+  useEffect(() => {
     return () => {
+      if (imageFitToastTimeoutRef.current !== null) {
+        window.clearTimeout(imageFitToastTimeoutRef.current)
+      }
       imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url))
     }
+  }, [])
+
+  const showImageFitToast = useCallback(() => {
+    setIsImageFitToastVisible(true)
+
+    if (imageFitToastTimeoutRef.current !== null) {
+      window.clearTimeout(imageFitToastTimeoutRef.current)
+    }
+
+    imageFitToastTimeoutRef.current = window.setTimeout(() => {
+      setIsImageFitToastVisible(false)
+      imageFitToastTimeoutRef.current = null
+    }, 2200)
   }, [])
 
   const updateImages = useCallback((updater) => {
@@ -106,6 +132,19 @@ function App() {
     }))
   }, [])
 
+  const handleAspectRatioVariationChange = useCallback((nextHasMixedAspectRatios) => {
+    const shouldShowToast =
+      nextHasMixedAspectRatios &&
+      !previousHasMixedAspectRatiosRef.current
+
+    previousHasMixedAspectRatiosRef.current = nextHasMixedAspectRatios
+    setHasMixedAspectRatios(nextHasMixedAspectRatios)
+
+    if (shouldShowToast) {
+      showImageFitToast()
+    }
+  }, [showImageFitToast])
+
   return (
     <div className={`app-container ${isSettingsOpen ? 'settings-open' : 'settings-closed'}`}>
       <header className="app-header">
@@ -158,6 +197,8 @@ function App() {
             settings={settings}
             onSettingsChange={handleSettingsChange}
             onInputChange={handleSettingInputChange}
+            showImageFitSection={images.length > 0 && hasMixedAspectRatios}
+            showImageFitHint={!hasMixedAspectRatios}
             isOpen={isSettingsOpen}
             onToggle={() => setIsSettingsOpen((currentValue) => !currentValue)}
           />
@@ -176,11 +217,17 @@ function App() {
                 onRemove={handleRemove}
                 onAdd={handleUpload}
                 onUpdateImages={updateImages}
+                onAspectRatioVariationChange={handleAspectRatioVariationChange}
               />
             </div>
           )}
         </div>
       </main>
+      {isImageFitToastVisible ? (
+        <div className="app-toast" role="status" aria-live="polite">
+          縦横比の異なる画像を検出しました
+        </div>
+      ) : null}
     </div>
   )
 }

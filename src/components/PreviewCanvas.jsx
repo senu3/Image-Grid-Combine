@@ -258,6 +258,31 @@ function getCellImagePlacement(cell, anchor = cell.settings.anchor) {
     return { renderW, renderH, renderX, renderY };
 }
 
+function hasAspectRatioVariation(images) {
+    if (images.length < 2) {
+        return false;
+    }
+
+    const comparableImages = images.filter((image) => (
+        Number.isFinite(image.width) &&
+        Number.isFinite(image.height) &&
+        image.width > 0 &&
+        image.height > 0
+    ));
+
+    if (comparableImages.length !== images.length) {
+        return false;
+    }
+
+    const [baseImage, ...restImages] = comparableImages;
+    const baseWidth = BigInt(baseImage.width);
+    const baseHeight = BigInt(baseImage.height);
+
+    return restImages.some((image) => (
+        BigInt(image.width) * baseHeight !== baseWidth * BigInt(image.height)
+    ));
+}
+
 function SortableItem({ id, cell, zoom }) {
     const {
         attributes,
@@ -313,7 +338,15 @@ function SortableItem({ id, cell, zoom }) {
     );
 }
 
-export default function PreviewCanvas({ images, settings, onReorder, onRemove, onAdd, onUpdateImages }) {
+export default function PreviewCanvas({
+    images,
+    settings,
+    onReorder,
+    onRemove,
+    onAdd,
+    onUpdateImages,
+    onAspectRatioVariationChange
+}) {
     const scrollAreaRef = useRef(null);
     const addInputRef = useRef(null);
     const isMountedRef = useRef(true);
@@ -465,6 +498,10 @@ export default function PreviewCanvas({ images, settings, onReorder, onRemove, o
             };
         });
     }, [images, imageAssets]);
+
+    useEffect(() => {
+        onAspectRatioVariationChange?.(hasAspectRatioVariation(loadedImages));
+    }, [loadedImages, onAspectRatioVariationChange]);
 
     const hasPendingImageMetadata = loadedImages.some((image) => image.width == null || image.height == null);
 

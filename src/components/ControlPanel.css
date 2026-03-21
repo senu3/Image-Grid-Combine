@@ -86,6 +86,24 @@
     display: none;
 }
 
+.image-fit-hint-section {
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+}
+
+.image-fit-hint-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.image-fit-hint-row svg {
+    flex-shrink: 0;
+}
+
 /* Anchor Grid Styles */
 .anchor-visualizer {
     position: relative;

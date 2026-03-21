@@ -10,6 +10,8 @@ export default function ControlPanel({
     settings,
     onSettingsChange,
     onInputChange,
+    showImageFitSection = true,
+    showImageFitHint = false,
     isOpen = true,
     onToggle
 }) {
@@ -176,41 +178,52 @@ export default function ControlPanel({
                     </div>
                 </div>
 
-                <div className="section">
-                    <h3><Maximize size={18} /> Advanced</h3>
-                    <div className="input-group">
-                        <label className="control-label">fitMode</label>
-                        <select name="fitMode" value={settings.fitMode} onChange={handleChange} style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
-                            <option value="average">Average (Default)</option>
-                            <option value="portrait">Match Portrait (Tallest)</option>
-                            <option value="landscape">Match Landscape (Widest)</option>
-                            <option value="max_dimensions">Max Dimensions (Largest W & H)</option>
-                            <option value="original">Original (No Crop)</option>
-                        </select>
+                {showImageFitHint ? (
+                    <div className="section image-fit-hint-section">
+                        <div className="image-fit-hint-row">
+                            <Maximize size={16} />
+                            <span>縦横比が異なる画像を追加すると、Image Fit が表示されます。</span>
+                        </div>
                     </div>
+                ) : null}
 
-                    <div className="input-group">
-                        <label className="control-label">Anchor Point</label>
-                        <div className="anchor-visualizer">
-                            <Image className="anchor-bg-icon" aria-hidden="true" />
-                            <div className="anchor-grid">
-                                {['top-left', 'top-center', 'top-right',
-                                    'center-left', 'center', 'center-right',
-                                    'bottom-left', 'bottom-center', 'bottom-right'].map(pos => (
-                                        <button
-                                            key={pos}
-                                            type="button"
-                                            className={`anchor-btn ${settings.anchor === pos ? 'active' : ''}`}
-                                            onClick={() => onSettingsChange({ ...settings, anchor: pos })}
-                                            title={pos}
-                                        >
-                                            <div className="dot" />
-                                        </button>
-                                    ))}
+                {showImageFitSection ? (
+                    <div className="section">
+                        <h3><Maximize size={18} /> Image Fit</h3>
+                        <div className="input-group">
+                            <label className="control-label">fitMode</label>
+                            <select name="fitMode" value={settings.fitMode} onChange={handleChange} style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
+                                <option value="average">Average (Default)</option>
+                                <option value="portrait">Match Portrait (Tallest)</option>
+                                <option value="landscape">Match Landscape (Widest)</option>
+                                <option value="max_dimensions">Max Dimensions (Largest W & H)</option>
+                                <option value="original">Original (No Crop)</option>
+                            </select>
+                        </div>
+
+                        <div className="input-group">
+                            <label className="control-label">Anchor Point</label>
+                            <div className="anchor-visualizer">
+                                <Image className="anchor-bg-icon" aria-hidden="true" />
+                                <div className="anchor-grid">
+                                    {['top-left', 'top-center', 'top-right',
+                                        'center-left', 'center', 'center-right',
+                                        'bottom-left', 'bottom-center', 'bottom-right'].map(pos => (
+                                            <button
+                                                key={pos}
+                                                type="button"
+                                                className={`anchor-btn ${settings.anchor === pos ? 'active' : ''}`}
+                                                onClick={() => onSettingsChange({ ...settings, anchor: pos })}
+                                                title={pos}
+                                            >
+                                                <div className="dot" />
+                                            </button>
+                                        ))}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                ) : null}
             </div>
         </div>
     );

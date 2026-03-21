@@ -111,6 +111,25 @@
     display: none !important;
 }
 
+.app-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 1.25rem;
+    transform: translateX(-50%);
+    z-index: 1100;
+    max-width: min(calc(100vw - 2rem), 420px);
+    padding: 0.75rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 35%, var(--border-color));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--panel-bg) 92%, black);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.35;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .mobile-only {
@@ -199,5 +218,11 @@
         overflow: visible;
         background-color: transparent;
         z-index: auto;
+    }
+
+    .app-toast {
+        bottom: calc(var(--mobile-action-bar-height) + 0.75rem);
+        max-width: calc(100vw - 1.5rem);
+        font-size: 0.85rem;
     }
 }
