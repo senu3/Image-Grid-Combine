@@ -100,6 +100,54 @@ test('calculateLayout uses max_dimensions ratio in height_row mode', () => {
     assertApproxEqual(layout.cells[1].x, 160);
 });
 
+test('calculateLayout uses the configured rows in height_row mode', () => {
+    const layout = calculateLayout([
+        { id: 'a', width: 100, height: 100 },
+        { id: 'b', width: 100, height: 100 },
+        { id: 'c', width: 100, height: 100 },
+        { id: 'd', width: 100, height: 100 },
+        { id: 'e', width: 100, height: 100 },
+        { id: 'f', width: 100, height: 100 },
+        { id: 'g', width: 100, height: 100 },
+    ], {
+        mode: 'height_row',
+        width: 300,
+        height: 500,
+        rows: 5,
+        cols: 2,
+        gap: 10,
+        fitMode: 'average',
+        anchor: 'center',
+    });
+
+    assertApproxEqual(layout.totalHeight, 500);
+    assertApproxEqual(layout.cells[4].y, 408);
+    assertApproxEqual(layout.cells[5].x, 102);
+});
+
+test('calculateLayout aligns original height_row columns by the widest cell in each column', () => {
+    const layout = calculateLayout([
+        { id: 'a', width: 100, height: 100 },
+        { id: 'b', width: 200, height: 100 },
+        { id: 'c', width: 50, height: 100 },
+    ], {
+        mode: 'height_row',
+        width: 300,
+        height: 210,
+        rows: 2,
+        cols: 2,
+        gap: 10,
+        fitMode: 'original',
+        anchor: 'center',
+    });
+
+    assertApproxEqual(layout.totalHeight, 210);
+    assertApproxEqual(layout.totalWidth, 260);
+    assertApproxEqual(layout.cells[0].x, 50);
+    assertApproxEqual(layout.cells[1].y, 110);
+    assertApproxEqual(layout.cells[2].x, 210);
+});
+
 test('calculateLayout allows overlapping cells when original mode uses a negative gap', () => {
     const layout = calculateLayout([
         { id: 'a', width: 100, height: 100 },

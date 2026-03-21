@@ -22,6 +22,20 @@ function calculateTargetRatio(images, fitMode) {
     }
 }
 
+function getGridPosition(index, mode, numRows, numCols) {
+    if (mode === 'height_row') {
+        return {
+            r: index % numRows,
+            c: Math.floor(index / numRows),
+        };
+    }
+
+    return {
+        r: Math.floor(index / numCols),
+        c: index % numCols,
+    };
+}
+
 /**
  * Calculate Grid Layout
  * @param {Array} images - Array of image objects { width, height, ... }
@@ -97,59 +111,53 @@ export function calculateLayout(images, settings) {
             return { totalWidth, totalHeight, cells };
 
         } else {
-            // Variable Cell Width (Ragged Rows)
+            // Variable Column Width
             numRows = Math.max(1, rows);
-            // Count per row might vary? No, "Height x Row" usually implies fixed rows, images flow into them?
-            // Standard behavior: evenly distribute images across rows?
-            // "cols" is calculated as ceil(count / rows).
             numCols = Math.ceil(count / numRows);
 
             totalHeight = height;
             cellHeight = (height - (Math.max(0, numRows - 1)) * gap) / numRows;
 
-            // 1. Calculate dimensions
             const cellDims = images.map(img => {
                 const w = cellHeight * (img.width / img.height);
                 return { w, h: cellHeight };
             });
 
-            // 2. Position Cells
-            const cells = [];
-            const rowWidths = Array(numRows).fill(0);
-            const rowXOffsets = Array(numRows).fill(0);
+            const columnWidths = [];
+            for (let c = 0; c < numCols; c++) {
+                let maxW = 0;
+                for (let r = 0; r < numRows; r++) {
+                    const idx = c * numRows + r;
+                    if (idx < count) {
+                        maxW = Math.max(maxW, cellDims[idx].w);
+                    }
+                }
+                columnWidths.push(maxW);
+            }
 
-            // We need to distribute images. Standard grid logic: filled column by column or row by row?
-            // Previous logic: `const r = Math.floor(i / numCols);` -> Row by row.
-            // But usually Height x Row means we fill rows?
-            // Let's stick to standard index filling: Row 0 gets 0..numCols-1.
+            const columnOffsets = [];
+            let currentOffset = 0;
+            for (let c = 0; c < numCols; c++) {
+                columnOffsets.push(currentOffset);
+                currentOffset += columnWidths[c] + gap;
+            }
 
-            images.forEach((img, i) => {
-                const r = Math.floor(i / numCols);
-                const x = rowXOffsets[r];
+            totalWidth = columnWidths.reduce((sum, w) => sum + w, 0) + (Math.max(0, numCols - 1) * gap);
 
-                const y = r * (cellHeight + gap);
+            const cells = images.map((img, i) => {
+                const { r, c } = getGridPosition(i, mode, numRows, numCols);
 
-                const w = cellDims[i].w;
-
-                cells.push({
+                return {
                     image: img,
-                    x,
-                    y,
-                    width: w,
+                    x: columnOffsets[c] + (columnWidths[c] - cellDims[i].w) / 2,
+                    y: r * (cellHeight + gap),
+                    width: cellDims[i].w,
                     height: cellHeight,
                     imgRatio: img.width / img.height,
                     cellRatio: img.width / img.height,
                     settings
-                });
-
-                // Track max width
-                rowWidths[r] = Math.max(rowWidths[r], x + w);
-                rowXOffsets[r] = x + w + gap;
+                };
             });
-
-            totalWidth = Math.max(...rowWidths);
-
-            // Center rows horizontally? Or left align? Left align is standard.
 
             return { totalWidth, totalHeight, cells };
         }
@@ -181,8 +189,7 @@ export function calculateLayout(images, settings) {
 
     // Calculate positions for each cell
     const cells = images.map((img, i) => {
-        const r = Math.floor(i / numCols);
-        const c = i % numCols;
+        const { r, c } = getGridPosition(i, mode, numRows, numCols);
 
         const x = c * (cellWidth + gap);
         const y = r * (cellHeight + gap);
