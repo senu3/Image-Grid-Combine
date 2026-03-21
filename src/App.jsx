@@ -25,7 +25,7 @@ function App() {
     rows: 2,
     height: 1600,
     cols: 3,
-    gap: 10,
+    gap: 0,
     backgroundColor: '#ffffff',
     fitMode: 'average', // 'average', 'portrait', 'landscape'
     anchor: 'center' // 'top-left', 'top-center', 'top-right', ... 'center' ...
