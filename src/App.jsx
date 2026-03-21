@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { SlidersHorizontal, X } from 'lucide-react'
+import { Download, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import ImageUploader from './components/ImageUploader'
 import ControlPanel from './components/ControlPanel'
 import PreviewCanvas from './components/PreviewCanvas'
@@ -76,6 +76,7 @@ function loadStoredSettings() {
 function App() {
   const [images, setImages] = useState([])
   const imagesRef = useRef(images)
+  const previewSaveActionRef = useRef(null)
   const [hasMixedAspectRatios, setHasMixedAspectRatios] = useState(false)
   const [toast, setToast] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
@@ -206,6 +207,14 @@ function App() {
     setHasMixedAspectRatios(nextHasMixedAspectRatios)
   }, [])
 
+  const handleSaveImage = useCallback(() => {
+    previewSaveActionRef.current?.()
+  }, [])
+
+  const handlePreviewSaveActionChange = useCallback((saveAction) => {
+    previewSaveActionRef.current = saveAction
+  }, [])
+
   return (
     <div className={`app-container ${isSettingsOpen ? 'settings-open' : 'settings-closed'}`}>
       <header className="app-header">
@@ -213,8 +222,23 @@ function App() {
           <h1>Image Grid Combine</h1>
         </div>
         <div className="header-actions">
-          <button className="btn-secondary" onClick={clearImages} disabled={images.length === 0}>
-            Clear All
+          <button
+            className="btn-secondary header-clear-btn"
+            onClick={clearImages}
+            disabled={images.length === 0}
+            aria-label="Clear All"
+          >
+            <Trash2 size={16} />
+            <span className="header-action-label">Clear All</span>
+          </button>
+          <button
+            className="btn-primary header-save-btn"
+            onClick={handleSaveImage}
+            disabled={images.length === 0}
+            aria-label="Save Image"
+          >
+            <Download size={16} />
+            <span className="header-action-label">Save Image</span>
           </button>
         </div>
       </header>
@@ -295,6 +319,7 @@ function App() {
                 onToast={showToast}
                 onError={showError}
                 onErrorClear={clearError}
+                onSaveActionChange={handlePreviewSaveActionChange}
               />
             </div>
           )}

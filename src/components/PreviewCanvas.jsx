@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
-    Download,
     ZoomIn,
     ZoomOut,
     Plus,
@@ -348,7 +347,8 @@ export default function PreviewCanvas({
     onAspectRatioVariationChange,
     onToast,
     onError,
-    onErrorClear
+    onErrorClear,
+    onSaveActionChange
 }) {
     const scrollAreaRef = useRef(null);
     const addInputRef = useRef(null);
@@ -701,7 +701,7 @@ export default function PreviewCanvas({
         }
     };
 
-    const handleDownload = async () => {
+    const handleDownload = useCallback(async () => {
         const exportImages = await Promise.all(
             images.map(async (image) => {
                 const asset = await ensureImageAsset(image);
@@ -774,7 +774,15 @@ export default function PreviewCanvas({
         setTimeout(() => {
             URL.revokeObjectURL(downloadUrl);
         }, 0);
-    };
+    }, [ensureImageAsset, images, onError, onErrorClear, onToast, settings]);
+
+    useEffect(() => {
+        onSaveActionChange?.(handleDownload);
+
+        return () => {
+            onSaveActionChange?.(null);
+        };
+    }, [handleDownload, onSaveActionChange]);
 
     const handleAutoFitToggle = () => {
         if (autoFitEnabled) {
@@ -837,9 +845,6 @@ export default function PreviewCanvas({
                         title="Add Images"
                     >
                         <Plus size={16} /> <span>Add Image</span>
-                    </button>
-                    <button className="btn-primary" onClick={handleDownload}>
-                        <Download size={16} /> Save Image
                     </button>
                 </div>
             </div>

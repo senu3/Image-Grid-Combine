@@ -106,7 +106,7 @@ button:focus-visible {
     gap: 0.5rem;
     background-color: var(--accent-color);
     color: white;
-    border: 1px solid var(--accent-color);
+    border: none;
 }
 
 .btn-primary:hover {

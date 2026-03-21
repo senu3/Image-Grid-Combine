@@ -24,6 +24,24 @@
     color: var(--text-primary);
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-save-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-clear-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .app-main {
     flex: 1;
     display: flex;
@@ -168,6 +186,14 @@
 
     .app-header {
         padding: 0 1rem;
+    }
+
+    .header-actions {
+        gap: 0.5rem;
+    }
+
+    .header-action-label {
+        display: none;
     }
 
     .app-error-banner {
