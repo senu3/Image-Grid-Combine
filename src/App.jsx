@@ -172,6 +172,18 @@ function App() {
     updateImages([])
   }, [clearError, updateImages])
 
+  const handleClearAll = useCallback(() => {
+    if (images.length === 0) {
+      return
+    }
+
+    if (!window.confirm('すべての画像を削除しますか？')) {
+      return
+    }
+
+    clearImages()
+  }, [clearImages, images.length])
+
   const handleReorder = useCallback((oldIndex, newIndex) => {
     if (oldIndex === newIndex) {
       return
@@ -224,7 +236,7 @@ function App() {
         <div className="header-actions">
           <button
             className="btn-secondary header-clear-btn"
-            onClick={clearImages}
+            onClick={handleClearAll}
             disabled={images.length === 0}
             aria-label="Clear All"
           >
