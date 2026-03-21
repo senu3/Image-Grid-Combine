@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, X } from 'lucide-react'
 import ImageUploader from './components/ImageUploader'
 import ControlPanel from './components/ControlPanel'
 import PreviewCanvas from './components/PreviewCanvas'
@@ -12,9 +12,9 @@ function App() {
   const [images, setImages] = useState([])
   const imagesRef = useRef(images)
   const [hasMixedAspectRatios, setHasMixedAspectRatios] = useState(false)
-  const [isImageFitToastVisible, setIsImageFitToastVisible] = useState(false)
-  const imageFitToastTimeoutRef = useRef(null)
-  const previousHasMixedAspectRatiosRef = useRef(false)
+  const [toast, setToast] = useState(null)
+  const [errorMessage, setErrorMessage] = useState(null)
+  const toastTimeoutRef = useRef(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
     return !isMobileViewport()
   })
@@ -36,31 +36,40 @@ function App() {
   }, [images])
 
   useEffect(() => {
-    if (images.length === 0) {
-      previousHasMixedAspectRatiosRef.current = false
-    }
-  }, [images.length])
-
-  useEffect(() => {
     return () => {
-      if (imageFitToastTimeoutRef.current !== null) {
-        window.clearTimeout(imageFitToastTimeoutRef.current)
+      if (toastTimeoutRef.current !== null) {
+        window.clearTimeout(toastTimeoutRef.current)
       }
       imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url))
     }
   }, [])
 
-  const showImageFitToast = useCallback(() => {
-    setIsImageFitToastVisible(true)
+  const showToast = useCallback((message, tone = 'info') => {
+    setToast({ message, tone })
 
-    if (imageFitToastTimeoutRef.current !== null) {
-      window.clearTimeout(imageFitToastTimeoutRef.current)
+    if (toastTimeoutRef.current !== null) {
+      window.clearTimeout(toastTimeoutRef.current)
     }
 
-    imageFitToastTimeoutRef.current = window.setTimeout(() => {
-      setIsImageFitToastVisible(false)
-      imageFitToastTimeoutRef.current = null
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToast(null)
+      toastTimeoutRef.current = null
     }, 2200)
+  }, [])
+
+  const clearError = useCallback(() => {
+    setErrorMessage(null)
+  }, [])
+
+  const showError = useCallback((message) => {
+    setErrorMessage(message)
+
+    if (toastTimeoutRef.current !== null) {
+      window.clearTimeout(toastTimeoutRef.current)
+      toastTimeoutRef.current = null
+    }
+
+    setToast(null)
   }, [])
 
   const updateImages = useCallback((updater) => {
@@ -79,6 +88,8 @@ function App() {
   }, [])
 
   const handleUpload = useCallback((files) => {
+    clearError()
+
     const newImages = files.map((file) => ({
       file,
       id: crypto.randomUUID(),
@@ -91,15 +102,16 @@ function App() {
     if (isMobileViewport()) {
       setIsSettingsOpen(false)
     }
-  }, [updateImages])
+  }, [clearError, updateImages])
 
   const clearImages = useCallback(() => {
+    clearError()
     updateImages([])
 
     if (isMobileViewport()) {
       setIsSettingsOpen(true)
     }
-  }, [updateImages])
+  }, [clearError, updateImages])
 
   const handleReorder = useCallback((oldIndex, newIndex) => {
     if (oldIndex === newIndex) {
@@ -133,17 +145,8 @@ function App() {
   }, [])
 
   const handleAspectRatioVariationChange = useCallback((nextHasMixedAspectRatios) => {
-    const shouldShowToast =
-      nextHasMixedAspectRatios &&
-      !previousHasMixedAspectRatiosRef.current
-
-    previousHasMixedAspectRatiosRef.current = nextHasMixedAspectRatios
     setHasMixedAspectRatios(nextHasMixedAspectRatios)
-
-    if (shouldShowToast) {
-      showImageFitToast()
-    }
-  }, [showImageFitToast])
+  }, [])
 
   return (
     <div className={`app-container ${isSettingsOpen ? 'settings-open' : 'settings-closed'}`}>
@@ -191,6 +194,19 @@ function App() {
           <span>More</span>
         </button>
       </div>
+      {errorMessage ? (
+        <div className="app-error-banner" role="alert" aria-live="assertive">
+          <span>{errorMessage}</span>
+          <button
+            type="button"
+            className="app-error-close"
+            onClick={clearError}
+            aria-label="エラーを閉じる"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ) : null}
       <main className="app-main">
         <div className="sidebar">
           <ControlPanel
@@ -206,7 +222,7 @@ function App() {
         <div className="content-area">
           {images.length === 0 ? (
             <div className="empty-state">
-              <ImageUploader onUpload={handleUpload} />
+              <ImageUploader onUpload={handleUpload} onToast={showToast} onError={showError} />
             </div>
           ) : (
             <div className="preview-wrap">
@@ -218,14 +234,17 @@ function App() {
                 onAdd={handleUpload}
                 onUpdateImages={updateImages}
                 onAspectRatioVariationChange={handleAspectRatioVariationChange}
+                onToast={showToast}
+                onError={showError}
+                onErrorClear={clearError}
               />
             </div>
           )}
         </div>
       </main>
-      {isImageFitToastVisible ? (
-        <div className="app-toast" role="status" aria-live="polite">
-          縦横比の異なる画像を検出しました
+      {toast ? (
+        <div className={`app-toast ${toast.tone}`} role="status" aria-live="polite">
+          {toast.message}
         </div>
       ) : null}
     </div>

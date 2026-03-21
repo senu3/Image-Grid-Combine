@@ -345,12 +345,17 @@ export default function PreviewCanvas({
     onRemove,
     onAdd,
     onUpdateImages,
-    onAspectRatioVariationChange
+    onAspectRatioVariationChange,
+    onToast,
+    onError,
+    onErrorClear
 }) {
     const scrollAreaRef = useRef(null);
     const addInputRef = useRef(null);
     const isMountedRef = useRef(true);
     const activeImageIdsRef = useRef(new Set());
+    const hasShownAllImagesFailedRef = useRef(false);
+    const notifiedFailedImageIdsRef = useRef(new Set());
     const imageAssetCacheRef = useRef(new Map());
     const imageLoadPromisesRef = useRef(new Map());
     const imageLoadControllersRef = useRef(new Map());
@@ -425,6 +430,11 @@ export default function PreviewCanvas({
         const nextActiveIds = new Set(images.map((image) => image.id));
         activeImageIdsRef.current = nextActiveIds;
         dispatchImageAssets({ type: 'prune', activeIds: nextActiveIds });
+        notifiedFailedImageIdsRef.current.forEach((id) => {
+            if (!nextActiveIds.has(id)) {
+                notifiedFailedImageIdsRef.current.delete(id);
+            }
+        });
 
         for (const [id, asset] of imageAssetCacheRef.current.entries()) {
             if (!nextActiveIds.has(id)) {
@@ -504,6 +514,46 @@ export default function PreviewCanvas({
     }, [loadedImages, onAspectRatioVariationChange]);
 
     const hasPendingImageMetadata = loadedImages.some((image) => image.width == null || image.height == null);
+    const failedImageCount = loadedImages.filter((image) => imageAssets[image.id]?.status === 'error').length;
+    const allImagesFailedToLoad = images.length > 0 && !hasPendingImageMetadata && failedImageCount === images.length;
+
+    useEffect(() => {
+        if (allImagesFailedToLoad) {
+            if (!hasShownAllImagesFailedRef.current) {
+                onError?.('画像を読み込めませんでした');
+                hasShownAllImagesFailedRef.current = true;
+            }
+            return;
+        }
+
+        hasShownAllImagesFailedRef.current = false;
+    }, [allImagesFailedToLoad, onError]);
+
+    useEffect(() => {
+        const failedImages = loadedImages.filter((image) => {
+            const asset = imageAssets[image.id];
+            return asset?.status === 'error' && !notifiedFailedImageIdsRef.current.has(image.id);
+        });
+
+        if (failedImages.length === 0) {
+            return;
+        }
+
+        failedImages.forEach((image) => {
+            notifiedFailedImageIdsRef.current.add(image.id);
+        });
+
+        if (allImagesFailedToLoad) {
+            return;
+        }
+
+        onToast?.(
+            failedImages.length === 1
+                ? '1件の画像を読み込めませんでした'
+                : `${failedImages.length}件の画像を読み込めませんでした`,
+            'info'
+        );
+    }, [allImagesFailedToLoad, imageAssets, loadedImages, onToast]);
 
     const layout = useMemo(() => {
         if (images.length === 0 || hasPendingImageMetadata) {
@@ -554,10 +604,22 @@ export default function PreviewCanvas({
 
     const sortDetails = SORT_DETAILS[sortState];
 
+    const filterImageFiles = useCallback((fileList) => {
+        const allFiles = Array.from(fileList ?? []);
+        const imageFiles = allFiles.filter((file) => file.type.startsWith('image/'));
+        const skippedCount = allFiles.length - imageFiles.length;
+
+        if (allFiles.length > 0 && imageFiles.length === 0) {
+            onError?.('画像ファイルを選択してください');
+        } else if (skippedCount > 0) {
+            onToast?.(`${skippedCount}件の画像以外を除外しました`, 'info');
+        }
+
+        return imageFiles;
+    }, [onError, onToast]);
+
     const handleFileChange = (event) => {
-        const nextFiles = Array.from(event.target.files ?? []).filter((file) =>
-            file.type.startsWith('image/')
-        );
+        const nextFiles = filterImageFiles(event.target.files);
 
         if (nextFiles.length > 0 && onAdd) {
             onAdd(nextFiles);
@@ -647,11 +709,19 @@ export default function PreviewCanvas({
                     ...image,
                     width: asset?.width ?? null,
                     height: asset?.height ?? null,
+                    hasDrawable: Boolean(asset?.drawable),
+                    loadStatus: asset?.status ?? null,
                 };
             })
         );
 
         if (exportImages.some((image) => image.width == null || image.height == null)) {
+            onToast?.('画像の読み込み完了後に保存してください', 'info');
+            return;
+        }
+
+        if (exportImages.some((image) => image.loadStatus === 'error' || !image.hasDrawable)) {
+            onError?.('読み込めない画像があるため保存できません');
             return;
         }
 
@@ -662,6 +732,7 @@ export default function PreviewCanvas({
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
+            onError?.('保存に失敗しました');
             return;
         }
 
@@ -689,6 +760,7 @@ export default function PreviewCanvas({
         });
 
         if (!blob) {
+            onError?.('保存に失敗しました');
             return;
         }
 
@@ -697,6 +769,7 @@ export default function PreviewCanvas({
         link.download = `grid_combine_${Date.now()}.png`;
         link.href = downloadUrl;
         link.click();
+        onErrorClear?.();
 
         setTimeout(() => {
             URL.revokeObjectURL(downloadUrl);

@@ -111,6 +111,36 @@
     display: none !important;
 }
 
+.app-error-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+    background: color-mix(in srgb, var(--panel-bg) 84%, #2a0f13);
+    border-bottom: 1px solid color-mix(in srgb, #ef4444 45%, var(--border-color));
+    color: var(--text-primary);
+}
+
+.app-error-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, #ef4444 35%, var(--border-color));
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.app-error-close:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.04);
+}
+
 .app-toast {
     position: fixed;
     left: 50%;
@@ -138,6 +168,11 @@
 
     .app-header {
         padding: 0 1rem;
+    }
+
+    .app-error-banner {
+        padding-left: 1rem;
+        padding-right: 0.75rem;
     }
 
     .mobile-quick-layout-bar {

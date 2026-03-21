@@ -8,10 +8,23 @@ import './ImageUploader.css';
  * @param {Object} props
  * @param {Function} props.onUpload - Callback with array of file objects
  */
-export default function ImageUploader({ onUpload }) {
+export default function ImageUploader({ onUpload, onToast, onError }) {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
     const folderInputRef = useRef(null);
+
+    const notifySelectionResult = (files) => {
+        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        const skippedCount = files.length - imageFiles.length;
+
+        if (files.length > 0 && imageFiles.length === 0) {
+            onError?.('画像ファイルを選択してください');
+        } else if (skippedCount > 0) {
+            onToast?.(`${skippedCount}件の画像以外を除外しました`, 'info');
+        }
+
+        return imageFiles;
+    };
 
     const handleDragOver = (e) => {
         e.preventDefault();
@@ -27,10 +40,7 @@ export default function ImageUploader({ onUpload }) {
         e.preventDefault();
         setIsDragging(false);
 
-        // Process dropped files
-        const files = Array.from(e.dataTransfer.files).filter(file =>
-            file.type.startsWith('image/')
-        );
+        const files = notifySelectionResult(Array.from(e.dataTransfer.files));
 
         if (files.length > 0) {
             onUpload(files);
@@ -38,9 +48,7 @@ export default function ImageUploader({ onUpload }) {
     };
 
     const handleFileChange = (e) => {
-        const files = Array.from(e.target.files).filter(file =>
-            file.type.startsWith('image/')
-        );
+        const files = notifySelectionResult(Array.from(e.target.files ?? []));
         if (files.length > 0) {
             onUpload(files);
         }
