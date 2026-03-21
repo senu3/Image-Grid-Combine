@@ -7,6 +7,71 @@ import NumberStepper from './components/NumberStepper'
 import './App.css'
 
 const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 768
+const SETTINGS_STORAGE_KEY = 'image-grid-combine:settings:v1'
+const VALID_MODES = new Set(['width_col', 'height_row'])
+const VALID_FIT_MODES = new Set(['average', 'portrait', 'landscape', 'max_dimensions', 'original'])
+const VALID_ANCHORS = new Set([
+  'top-left',
+  'top-center',
+  'top-right',
+  'center-left',
+  'center',
+  'center-right',
+  'bottom-left',
+  'bottom-center',
+  'bottom-right'
+])
+
+const DEFAULT_SETTINGS = {
+  mode: 'width_col',
+  width: 1200,
+  rows: 2,
+  height: 1600,
+  cols: 3,
+  gap: 0,
+  backgroundColor: '#ffffff',
+  fitMode: 'average',
+  anchor: 'center'
+}
+
+function getStoredNumber(value, fallback) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function normalizeStoredSettings(candidate) {
+  const nextSettings = candidate && typeof candidate === 'object' ? candidate : {}
+
+  return {
+    mode: VALID_MODES.has(nextSettings.mode) ? nextSettings.mode : DEFAULT_SETTINGS.mode,
+    width: getStoredNumber(nextSettings.width, DEFAULT_SETTINGS.width),
+    rows: getStoredNumber(nextSettings.rows, DEFAULT_SETTINGS.rows),
+    height: getStoredNumber(nextSettings.height, DEFAULT_SETTINGS.height),
+    cols: getStoredNumber(nextSettings.cols, DEFAULT_SETTINGS.cols),
+    gap: getStoredNumber(nextSettings.gap, DEFAULT_SETTINGS.gap),
+    backgroundColor: typeof nextSettings.backgroundColor === 'string'
+      ? nextSettings.backgroundColor
+      : DEFAULT_SETTINGS.backgroundColor,
+    fitMode: VALID_FIT_MODES.has(nextSettings.fitMode) ? nextSettings.fitMode : DEFAULT_SETTINGS.fitMode,
+    anchor: VALID_ANCHORS.has(nextSettings.anchor) ? nextSettings.anchor : DEFAULT_SETTINGS.anchor
+  }
+}
+
+function loadStoredSettings() {
+  if (typeof window === 'undefined') {
+    return { ...DEFAULT_SETTINGS }
+  }
+
+  try {
+    const rawSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (!rawSettings) {
+      return { ...DEFAULT_SETTINGS }
+    }
+
+    return normalizeStoredSettings(JSON.parse(rawSettings))
+  } catch {
+    return { ...DEFAULT_SETTINGS }
+  }
+}
 
 function App() {
   const [images, setImages] = useState([])
@@ -18,22 +83,19 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
     return !isMobileViewport()
   })
-
-  const [settings, setSettings] = useState({
-    mode: 'width_col', // 'width_col' or 'height_row'
-    width: 1200,
-    rows: 2,
-    height: 1600,
-    cols: 3,
-    gap: 0,
-    backgroundColor: '#ffffff',
-    fitMode: 'average', // 'average', 'portrait', 'landscape'
-    anchor: 'center' // 'top-left', 'top-center', 'top-right', ... 'center' ...
-  })
+  const [settings, setSettings] = useState(loadStoredSettings)
 
   useEffect(() => {
     imagesRef.current = images
   }, [images])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+    } catch {
+      // Ignore storage failures so the app remains usable.
+    }
+  }, [settings])
 
   useEffect(() => {
     return () => {
