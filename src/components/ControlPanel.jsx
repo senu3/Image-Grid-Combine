@@ -1,4 +1,4 @@
-import { Grid3x3, Maximize, Crosshair, Image, Monitor, X } from 'lucide-react';
+import { LayoutGrid, Grid3x3, Maximize, Crosshair, Image, Monitor, X } from 'lucide-react';
 import NumberStepper from './NumberStepper';
 import './ControlPanel.css';
 
@@ -38,25 +38,54 @@ export default function ControlPanel({
                         <X size={18} />
                     </button>
                 </div>
-                <div className="section">
-                    <h3><Monitor size={18} /> Layout</h3>
-                    <div className="mode-selector" style={{ marginBottom: '1rem' }}>
-                        <button
-                            className={`mode-btn ${settings.mode === 'width_col' ? 'active' : ''}`}
-                            onClick={() => onSettingsChange({ ...settings, mode: 'width_col' })}
-                        >
-                            Width × Col
-                        </button>
-                        <button
-                            className={`mode-btn ${settings.mode === 'height_row' ? 'active' : ''}`}
-                            onClick={() => onSettingsChange({ ...settings, mode: 'height_row' })}
-                        >
-                            Height × Row
-                        </button>
-                    </div>
+                <div className="section desktop-layout-fields">
+                    <h3><LayoutGrid size={18} /> Layout</h3>
+                    <div>
+                        <div className="mode-selector" style={{ marginBottom: '1rem' }}>
+                            <button
+                                className={`mode-btn ${settings.mode === 'width_col' ? 'active' : ''}`}
+                                onClick={() => onSettingsChange({ ...settings, mode: 'width_col' })}
+                            >
+                                Width × Col
+                            </button>
+                            <button
+                                className={`mode-btn ${settings.mode === 'height_row' ? 'active' : ''}`}
+                                onClick={() => onSettingsChange({ ...settings, mode: 'height_row' })}
+                            >
+                                Height × Row
+                            </button>
+                        </div>
 
-                    {settings.mode === 'width_col' ? (
-                        <>
+                        {settings.mode === 'width_col' ? (
+                            <div className="input-group">
+                                <label>Columns</label>
+                                <NumberStepper
+                                    name="cols"
+                                    value={settings.cols}
+                                    onChange={handleChange}
+                                    min={1}
+                                    max={100}
+                                />
+                            </div>
+                        ) : (
+                            <div className="input-group">
+                                <label>Rows</label>
+                                <NumberStepper
+                                    name="rows"
+                                    value={settings.rows}
+                                    onChange={handleChange}
+                                    min={1}
+                                    max={100}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="section">
+                    <h3><Monitor size={18} /> Output Size</h3>
+                    <div className="desktop-output-size-field">
+                        {settings.mode === 'width_col' ? (
                             <div className="input-group">
                                 <label>Total Width (px)</label>
                                 <input
@@ -68,19 +97,7 @@ export default function ControlPanel({
                                     max="10000"
                                 />
                             </div>
-                            <div className="input-group">
-                                <label>Columns</label>
-                                <NumberStepper
-                                    name="cols"
-                                    value={settings.cols}
-                                    onChange={handleChange}
-                                    min={1}
-                                    max={100}
-                                />
-                            </div>
-                        </>
-                    ) : (
-                        <>
+                        ) : (
                             <div className="input-group">
                                 <label>Total Height (px)</label>
                                 <input
@@ -92,18 +109,35 @@ export default function ControlPanel({
                                     max="10000"
                                 />
                             </div>
+                        )}
+                    </div>
+                    <div className="mobile-output-size-field">
+                        {settings.mode === 'width_col' ? (
                             <div className="input-group">
-                                <label>Rows</label>
-                                <NumberStepper
-                                    name="rows"
-                                    value={settings.rows}
+                                <label>Total Width (px)</label>
+                                <input
+                                    type="number"
+                                    name="width"
+                                    value={settings.width}
                                     onChange={handleChange}
-                                    min={1}
-                                    max={100}
+                                    min="1"
+                                    max="10000"
                                 />
                             </div>
-                        </>
-                    )}
+                        ) : (
+                            <div className="input-group">
+                                <label>Total Height (px)</label>
+                                <input
+                                    type="number"
+                                    name="height"
+                                    value={settings.height}
+                                    onChange={handleChange}
+                                    min="1"
+                                    max="10000"
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="section">
@@ -143,17 +177,20 @@ export default function ControlPanel({
                 </div>
 
                 <div className="section">
-                    <h3><Maximize size={18} /> fitMode</h3>
-                    <select name="fitMode" value={settings.fitMode} onChange={handleChange} style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
-                        <option value="average">Average (Default)</option>
-                        <option value="portrait">Match Portrait (Tallest)</option>
-                        <option value="landscape">Match Landscape (Widest)</option>
-                        <option value="max_dimensions">Max Dimensions (Largest W & H)</option>
-                        <option value="original">Original (No Crop)</option>
-                    </select>
+                    <h3><Maximize size={18} /> Advanced</h3>
+                    <div className="input-group">
+                        <label className="control-label">fitMode</label>
+                        <select name="fitMode" value={settings.fitMode} onChange={handleChange} style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
+                            <option value="average">Average (Default)</option>
+                            <option value="portrait">Match Portrait (Tallest)</option>
+                            <option value="landscape">Match Landscape (Widest)</option>
+                            <option value="max_dimensions">Max Dimensions (Largest W & H)</option>
+                            <option value="original">Original (No Crop)</option>
+                        </select>
+                    </div>
 
-                    <div style={{ marginTop: '1.5rem' }}>
-                        <h3><Crosshair size={18} /> Anchor Point</h3>
+                    <div className="input-group">
+                        <label className="control-label">Anchor Point</label>
                         <div className="anchor-visualizer">
                             <Image className="anchor-bg-icon" aria-hidden="true" />
                             <div className="anchor-grid">
@@ -178,4 +215,3 @@ export default function ControlPanel({
         </div>
     );
 }
-
