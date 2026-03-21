@@ -1,4 +1,4 @@
-import { LayoutGrid, Grid3x3, Maximize, Crosshair, Image, Monitor, X } from 'lucide-react';
+import { LayoutGrid, Grid3x3, Maximize, Crosshair, Image, Monitor, Trash2, X } from 'lucide-react';
 import NumberStepper from './NumberStepper';
 import './ControlPanel.css';
 
@@ -10,6 +10,8 @@ export default function ControlPanel({
     settings,
     onSettingsChange,
     onInputChange,
+    onClearAll,
+    hasImages = false,
     showImageFitSection = true,
     showImageFitHint = false,
     isOpen = true,
@@ -222,6 +224,19 @@ export default function ControlPanel({
                                 </div>
                             </div>
                         </div>
+                    </div>
+                ) : null}
+
+                {hasImages ? (
+                    <div className="section mobile-clear-all-section">
+                        <button
+                            type="button"
+                            className="mobile-clear-all-btn"
+                            onClick={onClearAll}
+                        >
+                            <Trash2 size={16} />
+                            <span>Clear All</span>
+                        </button>
                     </div>
                 ) : null}
             </div>

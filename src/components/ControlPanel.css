@@ -104,6 +104,28 @@
     flex-shrink: 0;
 }
 
+.mobile-clear-all-section {
+    display: none;
+}
+
+.mobile-clear-all-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.mobile-clear-all-btn:hover {
+    border-color: color-mix(in srgb, #ef4444 45%, var(--border-color));
+    color: #fff;
+}
+
 /* Anchor Grid Styles */
 .anchor-visualizer {
     position: relative;
@@ -354,6 +376,10 @@
     }
 
     .mobile-output-size-field {
+        display: block;
+    }
+
+    .mobile-clear-all-section {
         display: block;
     }
 }

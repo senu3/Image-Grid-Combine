@@ -235,7 +235,7 @@ function App() {
         </div>
         <div className="header-actions">
           <button
-            className="btn-secondary header-clear-btn"
+            className="btn-secondary header-clear-btn desktop-only"
             onClick={handleClearAll}
             disabled={images.length === 0}
             aria-label="Clear All"
@@ -307,6 +307,8 @@ function App() {
             settings={settings}
             onSettingsChange={handleSettingsChange}
             onInputChange={handleSettingInputChange}
+            onClearAll={handleClearAll}
+            hasImages={images.length > 0}
             showImageFitSection={images.length > 0 && hasMixedAspectRatios}
             showImageFitHint={!hasMixedAspectRatios}
             isOpen={isSettingsOpen}

@@ -129,6 +129,10 @@
     display: none !important;
 }
 
+.desktop-only {
+    display: inline-flex !important;
+}
+
 .app-error-banner {
     display: flex;
     align-items: center;
@@ -192,7 +196,11 @@
         gap: 0.5rem;
     }
 
-    .header-action-label {
+    .desktop-only {
+        display: none !important;
+    }
+
+    .header-save-btn .header-action-label {
         display: none;
     }
 
