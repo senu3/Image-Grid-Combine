@@ -1,4 +1,4 @@
-import { Grid3x3, Maximize, Crosshair, Monitor, X } from 'lucide-react';
+import { Grid3x3, Maximize, Crosshair, Image, Monitor, X } from 'lucide-react';
 import NumberStepper from './NumberStepper';
 import './ControlPanel.css';
 
@@ -154,19 +154,23 @@ export default function ControlPanel({
 
                     <div style={{ marginTop: '1.5rem' }}>
                         <h3><Crosshair size={18} /> Anchor Point</h3>
-                        <div className="anchor-grid">
-                            {['top-left', 'top-center', 'top-right',
-                                'center-left', 'center', 'center-right',
-                                'bottom-left', 'bottom-center', 'bottom-right'].map(pos => (
-                                    <button
-                                        key={pos}
-                                        className={`anchor-btn ${settings.anchor === pos ? 'active' : ''}`}
-                                        onClick={() => onSettingsChange({ ...settings, anchor: pos })}
-                                        title={pos}
-                                    >
-                                        <div className={`dot ${pos.split('-').map(p => p[0]).join('')}`} />
-                                    </button>
-                                ))}
+                        <div className="anchor-visualizer">
+                            <Image className="anchor-bg-icon" aria-hidden="true" />
+                            <div className="anchor-grid">
+                                {['top-left', 'top-center', 'top-right',
+                                    'center-left', 'center', 'center-right',
+                                    'bottom-left', 'bottom-center', 'bottom-right'].map(pos => (
+                                        <button
+                                            key={pos}
+                                            type="button"
+                                            className={`anchor-btn ${settings.anchor === pos ? 'active' : ''}`}
+                                            onClick={() => onSettingsChange({ ...settings, anchor: pos })}
+                                            title={pos}
+                                        >
+                                            <div className="dot" />
+                                        </button>
+                                    ))}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -76,14 +76,31 @@
 }
 
 /* Anchor Grid Styles */
+.anchor-visualizer {
+    position: relative;
+    width: 100px;
+    margin: 0 auto;
+}
+
+.anchor-bg-icon {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 88px;
+    height: 88px;
+    transform: translate(-50%, -50%);
+    color: var(--text-secondary);
+    opacity: 0.16;
+    z-index: 0;
+    pointer-events: none;
+}
+
 .anchor-grid {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 4px;
     width: 100px;
-    /* Compact size */
-    margin: 0 auto;
-    /* Center it? Or left aligned? */
 }
 
 .anchor-btn {
@@ -93,8 +110,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--input-bg);
-    border: 1px solid var(--border-color);
+    background-color: color-mix(in srgb, var(--input-bg) 0%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
     border-radius: 4px;
 }
 
