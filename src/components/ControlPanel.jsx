@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Grid3x3, Maximize, Crosshair, Monitor, X } from 'lucide-react';
 import NumberStepper from './NumberStepper';
 import './ControlPanel.css';
@@ -14,8 +13,6 @@ export default function ControlPanel({
     isOpen = true,
     onToggle
 }) {
-    const [activeTab, setActiveTab] = useState('layout');
-
     const handleChange = onInputChange ?? ((e) => {
         const { name, value, type } = e.target;
         const isNumber = type === 'number' || type === 'range';
@@ -24,10 +21,6 @@ export default function ControlPanel({
             [name]: isNumber ? parseInt(value, 10) || 0 : value
         });
     });
-
-    const handleTabChange = (tab) => {
-        setActiveTab(tab);
-    };
 
     return (
         <div className={`control-panel-shell ${isOpen ? 'open' : 'closed'}`}>
@@ -45,28 +38,7 @@ export default function ControlPanel({
                         <X size={18} />
                     </button>
                 </div>
-                <div className="mobile-tabs">
-                    <button
-                        className={`tab-btn ${activeTab === 'layout' ? 'active' : ''}`}
-                        onClick={() => handleTabChange('layout')}
-                    >
-                        Layout
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'spacing' ? 'active' : ''}`}
-                        onClick={() => handleTabChange('spacing')}
-                    >
-                        Spacing
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'advanced' ? 'active' : ''}`}
-                        onClick={() => handleTabChange('advanced')}
-                    >
-                        Advanced
-                    </button>
-                </div>
-
-                <div className={`section ${activeTab === 'layout' ? 'active' : ''}`}>
+                <div className="section">
                     <h3><Monitor size={18} /> Layout</h3>
                     <div className="mode-selector" style={{ marginBottom: '1rem' }}>
                         <button
@@ -134,7 +106,7 @@ export default function ControlPanel({
                     )}
                 </div>
 
-                <div className={`section ${activeTab === 'spacing' ? 'active' : ''}`}>
+                <div className="section">
                     <h3><Grid3x3 size={18} /> Spacing</h3>
                     <div className="input-group">
                         <label>Gap (px)</label>
@@ -170,7 +142,7 @@ export default function ControlPanel({
                     </div>
                 </div>
 
-                <div className={`section ${activeTab === 'advanced' ? 'active' : ''}`}>
+                <div className="section">
                     <h3><Maximize size={18} /> fitMode</h3>
                     <select name="fitMode" value={settings.fitMode} onChange={handleChange} style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
                         <option value="average">Average (Default)</option>

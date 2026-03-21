@@ -11,6 +11,7 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    overflow-y: auto;
 }
 
 .section h3 {
@@ -193,32 +194,6 @@
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Mobile Tabs */
-.mobile-tabs {
-    display: none;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--panel-bg);
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 0.75rem 0.5rem;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-}
-
-.tab-btn.active {
-    color: var(--accent-color);
-    border-bottom-color: var(--accent-color);
-}
-
 .panel-handle {
     display: none;
     align-items: center;
@@ -266,7 +241,7 @@
         gap: 0;
         height: auto;
         max-height: calc(100dvh - var(--app-header-height) - var(--mobile-quick-bar-height));
-        overflow: hidden;
+        overflow-y: auto;
         background-color: var(--panel-bg);
         position: fixed;
         top: calc(var(--app-header-height) + var(--mobile-quick-bar-height));
@@ -312,29 +287,19 @@
         align-items: center;
         justify-content: center;
     }
-}
-
-/* Tabs logic: Apply on Mobile OR Small Height */
-@media (max-width: 768px),
-(max-height: 768px) {
-    .mobile-tabs {
-        display: flex;
-        overflow-x: auto;
-    }
 
     .section {
-        display: none;
         padding: 1rem;
         padding-bottom: 1.25rem;
-        height: 100%;
-        overflow-y: auto;
-    }
-
-    .section.active {
-        display: block;
+        border-bottom: 1px solid var(--border-color);
     }
 
     .section h3 {
         display: flex;
+    }
+
+    .section:last-child {
+        border-bottom: none;
+        padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
     }
 }
