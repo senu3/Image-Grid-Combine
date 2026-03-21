@@ -827,7 +827,7 @@ export default function PreviewCanvas({
                         style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '8px' }}
                     >
                         <sortDetails.Icon size={16} />
-                        <span className="mobile-hide">{sortDetails.label}</span>
+                        <span>{sortDetails.label}</span>
                     </button>
                 </div>
                 <div className="toolbar-actions">

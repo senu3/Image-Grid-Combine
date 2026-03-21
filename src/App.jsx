@@ -107,10 +107,6 @@ function App() {
   const clearImages = useCallback(() => {
     clearError()
     updateImages([])
-
-    if (isMobileViewport()) {
-      setIsSettingsOpen(true)
-    }
   }, [clearError, updateImages])
 
   const handleReorder = useCallback((oldIndex, newIndex) => {
