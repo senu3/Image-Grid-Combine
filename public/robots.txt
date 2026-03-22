@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://senu3.github.io/Image-Grid-Combine/sitemap.xml
