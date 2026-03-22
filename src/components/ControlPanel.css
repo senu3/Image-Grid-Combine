@@ -104,6 +104,53 @@
     flex-shrink: 0;
 }
 
+.fit-mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.fit-mode-option {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.28rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background-color: var(--input-bg);
+    color: inherit;
+    text-align: left;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.fit-mode-option:hover {
+    border-color: color-mix(in srgb, var(--accent-color) 48%, var(--border-color));
+}
+
+.fit-mode-option:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-color) 58%, white);
+    outline-offset: 2px;
+}
+
+.fit-mode-option.active {
+    border-color: var(--accent-color);
+    background-color: color-mix(in srgb, var(--accent-color) 14%, var(--input-bg));
+}
+
+.fit-mode-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.fit-mode-description {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+
 .mobile-clear-all-section {
     display: none;
 }

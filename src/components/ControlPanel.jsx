@@ -2,6 +2,34 @@ import { LayoutGrid, Grid3x3, Maximize, Crosshair, Image, Monitor, Trash2, X } f
 import NumberStepper from './NumberStepper';
 import './ControlPanel.css';
 
+const FIT_MODE_OPTIONS = [
+    {
+        value: 'average',
+        title: 'Standard',
+        description: '縦横比が混在していても、全体を均しやすい標準設定です。',
+    },
+    {
+        value: 'portrait',
+        title: 'Portrait Priority',
+        description: '縦長の画像を優先して、セル内の見え方を合わせます。',
+    },
+    {
+        value: 'landscape',
+        title: 'Landscape Priority',
+        description: '横長の画像を優先して、セル内の見え方を合わせます。',
+    },
+    {
+        value: 'max_dimensions',
+        title: 'Contain',
+        description: '各セルの中に画像全体が収まるように表示します。',
+    },
+    {
+        value: 'original',
+        title: 'No Crop',
+        description: '画像ごとの縦横比をそのまま保って並べます。',
+    },
+];
+
 /**
  * ControlPanel Component
  * Settings for grid layout (Width x Rows or Height x Cols).
@@ -193,14 +221,22 @@ export default function ControlPanel({
                     <div className="section">
                         <h3><Maximize size={18} /> Image Fit</h3>
                         <div className="input-group">
-                            <label className="control-label">fitMode</label>
-                            <select name="fitMode" value={settings.fitMode} onChange={handleChange} style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
-                                <option value="average">Average (Default)</option>
-                                <option value="portrait">Match Portrait (Tallest)</option>
-                                <option value="landscape">Match Landscape (Widest)</option>
-                                <option value="max_dimensions">Max Dimensions (Largest W & H)</option>
-                                <option value="original">Original (No Crop)</option>
-                            </select>
+                            <label className="control-label">Fit Style</label>
+                            <div className="fit-mode-options" role="radiogroup" aria-label="Fit Style">
+                                {FIT_MODE_OPTIONS.map((option) => (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        role="radio"
+                                        className={`fit-mode-option ${settings.fitMode === option.value ? 'active' : ''}`}
+                                        onClick={() => onSettingsChange({ ...settings, fitMode: option.value })}
+                                        aria-checked={settings.fitMode === option.value}
+                                    >
+                                        <span className="fit-mode-title">{option.title}</span>
+                                        <span className="fit-mode-description">{option.description}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="input-group">
