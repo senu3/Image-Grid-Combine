@@ -27,6 +27,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { calculateLayout } from '../utils/gridLayout';
 import { calculateRenderDimensions, calculateRenderPosition } from '../utils/anchor';
+import { toRgbaColor } from '../utils/color';
 import './PreviewCanvas.css';
 
 const SORT_DETAILS = {
@@ -582,6 +583,7 @@ export default function PreviewCanvas({
 
         return calculateLayout(loadedImages, settings);
     }, [hasPendingImageMetadata, images.length, loadedImages, settings]);
+    const backgroundFillColor = toRgbaColor(settings.backgroundColor, settings.backgroundAlpha);
 
     const autoFitZoom = useMemo(() => {
         if (
@@ -756,7 +758,7 @@ export default function PreviewCanvas({
             return;
         }
 
-        ctx.fillStyle = settings.backgroundColor;
+        ctx.fillStyle = backgroundFillColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         exportLayout.cells.forEach((cell) => {
@@ -794,7 +796,7 @@ export default function PreviewCanvas({
         setTimeout(() => {
             URL.revokeObjectURL(downloadUrl);
         }, 0);
-    }, [ensureImageAsset, images, onError, onErrorClear, onToast, settings]);
+    }, [backgroundFillColor, ensureImageAsset, images, onError, onErrorClear, onToast, settings]);
 
     useEffect(() => {
         onSaveActionChange?.(handleDownload);
@@ -889,7 +891,7 @@ export default function PreviewCanvas({
                                 height: layout.totalHeight,
                                 transform: `scale(${zoom})`,
                                 transformOrigin: '0 0',
-                                backgroundColor: settings.backgroundColor,
+                                backgroundColor: backgroundFillColor,
                                 position: 'absolute',
                                 top: 0,
                                 left: 0

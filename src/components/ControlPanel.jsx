@@ -176,7 +176,7 @@ export default function ControlPanel({
                     <h3><Grid3x3 size={18} /> Spacing</h3>
                     <div className="input-group">
                         <label>Gap (px)</label>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div className="range-input-row">
                             <input
                                 type="range"
                                 name="gap"
@@ -184,7 +184,7 @@ export default function ControlPanel({
                                 onChange={handleChange}
                                 min="0"
                                 max="30"
-                                style={{ flex: 1 }}
+                                className="range-input"
                             />
                             <input
                                 type="number"
@@ -193,18 +193,32 @@ export default function ControlPanel({
                                 onChange={handleChange}
                                 min="0"
                                 max="100"
-                                style={{ width: '60px' }}
+                                className="range-value-input"
                             />
                         </div>
                     </div>
-                    <div className="input-group">
-                        <label>Background</label>
-                        <input
-                            type="color"
-                            name="backgroundColor"
-                            value={settings.backgroundColor}
-                            onChange={handleChange}
-                        />
+                    <div className="spacing-background-row">
+                        <div className="input-group spacing-background-color">
+                            <label>Background</label>
+                            <input
+                                type="color"
+                                name="backgroundColor"
+                                value={settings.backgroundColor}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="input-group spacing-background-opacity">
+                            <label>Opacity (%)</label>
+                            <input
+                                type="number"
+                                name="backgroundAlpha"
+                                value={settings.backgroundAlpha}
+                                onChange={handleChange}
+                                min="0"
+                                max="100"
+                                className="opacity-value-input"
+                            />
+                        </div>
                     </div>
                 </div>
 

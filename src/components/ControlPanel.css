@@ -60,6 +60,43 @@
     color: var(--text-secondary);
 }
 
+.range-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.range-input {
+    flex: 1;
+}
+
+.range-value-input {
+    flex: 0 0 84px;
+    min-width: 84px;
+    width: 84px;
+}
+
+.spacing-background-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.spacing-background-color {
+    flex: 1;
+    min-width: 0;
+}
+
+.spacing-background-opacity {
+    flex: 0 0 84px;
+    min-width: 84px;
+    margin-bottom: 0;
+}
+
+.opacity-value-input {
+    width: 100%;
+}
+
 .control-label {
     display: flex;
     align-items: center;
@@ -428,6 +465,15 @@
 
     .mobile-clear-all-section {
         display: block;
+    }
+
+    .spacing-background-row {
+        flex-wrap: wrap;
+        gap: 0.65rem;
+    }
+
+    .spacing-background-opacity {
+        flex-basis: 84px;
     }
 }
 

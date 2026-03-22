@@ -30,12 +30,17 @@ const DEFAULT_SETTINGS = {
   cols: 3,
   gap: 0,
   backgroundColor: '#ffffff',
+  backgroundAlpha: 100,
   fitMode: 'average',
   anchor: 'center'
 }
 
 function getStoredNumber(value, fallback) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function getStoredPercent(value, fallback) {
+  return Math.min(100, Math.max(0, getStoredNumber(value, fallback)))
 }
 
 function normalizeStoredSettings(candidate) {
@@ -51,6 +56,7 @@ function normalizeStoredSettings(candidate) {
     backgroundColor: typeof nextSettings.backgroundColor === 'string'
       ? nextSettings.backgroundColor
       : DEFAULT_SETTINGS.backgroundColor,
+    backgroundAlpha: getStoredPercent(nextSettings.backgroundAlpha, DEFAULT_SETTINGS.backgroundAlpha),
     fitMode: VALID_FIT_MODES.has(nextSettings.fitMode) ? nextSettings.fitMode : DEFAULT_SETTINGS.fitMode,
     anchor: VALID_ANCHORS.has(nextSettings.anchor) ? nextSettings.anchor : DEFAULT_SETTINGS.anchor
   }
