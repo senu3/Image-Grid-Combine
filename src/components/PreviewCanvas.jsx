@@ -4,6 +4,8 @@ import {
     ZoomOut,
     Plus,
     Maximize,
+    Trash2,
+    X,
     ArrowUpDown,
     ArrowUpAZ,
     ArrowDownAZ,
@@ -49,6 +51,19 @@ const MAX_AUTO_FIT_ZOOM = 1;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const IMAGE_BITMAP_TIMEOUT_MS = 1500;
 const IMAGE_LOAD_TIMEOUT_MS = 5000;
+const DRAG_DELETE_HINT_STORAGE_KEY = 'image-grid-combine:drag-delete-hint-dismissed:v1';
+
+function loadDismissedDragDeleteHint() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    try {
+        return window.localStorage.getItem(DRAG_DELETE_HINT_STORAGE_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
 
 function disposeImageAsset(asset) {
     const drawable = asset?.drawable;
@@ -386,6 +401,7 @@ export default function PreviewCanvas({
     const [autoFitEnabled, setAutoFitEnabled] = useState(true);
     const [imageAssets, dispatchImageAssets] = useReducer(imageAssetsReducer, {});
     const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+    const [isDragDeleteHintDismissed, setIsDragDeleteHintDismissed] = useState(loadDismissedDragDeleteHint);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -695,6 +711,16 @@ export default function PreviewCanvas({
         onUpdateImages(nextImages);
     };
 
+    const dismissDragDeleteHint = useCallback(() => {
+        setIsDragDeleteHintDismissed(true);
+
+        try {
+            window.localStorage.setItem(DRAG_DELETE_HINT_STORAGE_KEY, '1');
+        } catch {
+            // Ignore storage failures so the hint can still be dismissed for this session.
+        }
+    }, []);
+
     const handleDragEnd = (event) => {
         const { active, over } = event;
 
@@ -870,6 +896,22 @@ export default function PreviewCanvas({
                     </button>
                 </div>
             </div>
+            {!isDragDeleteHintDismissed ? (
+                <div className="drag-delete-hint" role="note">
+                    <div className="drag-delete-hint-copy">
+                        <Trash2 size={15} />
+                        <span>Tip: 画像を範囲外にドラッグして離すと削除されます</span>
+                    </div>
+                    <button
+                        type="button"
+                        className="drag-delete-hint-close"
+                        onClick={dismissDragDeleteHint}
+                        aria-label="削除ヒントを閉じる"
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
+            ) : null}
             <div className="canvas-scroll-area" ref={scrollAreaRef}>
                 {hasPendingImageMetadata ? (
                     <div className="preview-loading">
