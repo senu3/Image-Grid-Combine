@@ -212,7 +212,7 @@ export default function ControlPanel({
                     <div className="section image-fit-hint-section">
                         <div className="image-fit-hint-row">
                             <Maximize size={16} />
-                            <span>縦横比が異なる画像を追加すると、Image Fit が表示されます。</span>
+                            <span>縦横比が異なる画像を追加すると、画像フィット設定が表示されます。</span>
                         </div>
                     </div>
                 ) : null}

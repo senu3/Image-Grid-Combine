@@ -169,6 +169,7 @@ function App() {
 
   const clearImages = useCallback(() => {
     clearError()
+    setHasMixedAspectRatios(false)
     updateImages([])
   }, [clearError, updateImages])
 
@@ -310,7 +311,7 @@ function App() {
             onClearAll={handleClearAll}
             hasImages={images.length > 0}
             showImageFitSection={images.length > 0 && hasMixedAspectRatios}
-            showImageFitHint={!hasMixedAspectRatios}
+            showImageFitHint={images.length === 0 || !hasMixedAspectRatios}
             isOpen={isSettingsOpen}
             onToggle={() => setIsSettingsOpen((currentValue) => !currentValue)}
           />
