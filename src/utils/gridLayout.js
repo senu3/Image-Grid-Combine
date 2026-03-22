@@ -36,6 +36,81 @@ function getGridPosition(index, mode, numRows, numCols) {
     };
 }
 
+function calculateOriginalLayout(images, settings) {
+    const { width, height, rows, cols, gap, mode } = settings;
+    const count = images.length;
+
+    const numRows = mode === 'height_row'
+        ? Math.max(1, rows)
+        : Math.ceil(count / Math.max(1, cols));
+    const numCols = mode === 'width_col'
+        ? Math.max(1, cols)
+        : Math.ceil(count / Math.max(1, rows));
+
+    const rowHeights = Array(numRows).fill(0);
+    const columnWidths = Array(numCols).fill(0);
+
+    images.forEach((image, index) => {
+        const { r, c } = getGridPosition(index, mode, numRows, numCols);
+        rowHeights[r] = Math.max(rowHeights[r], image.height);
+        columnWidths[c] = Math.max(columnWidths[c], image.width);
+    });
+
+    const totalSourceWidth = columnWidths.reduce((sum, columnWidth) => sum + columnWidth, 0);
+    const totalSourceHeight = rowHeights.reduce((sum, rowHeight) => sum + rowHeight, 0);
+
+    const scale = mode === 'width_col'
+        ? (width - (Math.max(0, numCols - 1)) * gap) / totalSourceWidth
+        : (height - (Math.max(0, numRows - 1)) * gap) / totalSourceHeight;
+
+    const scaledRowHeights = rowHeights.map((rowHeight) => rowHeight * scale);
+    const scaledColumnWidths = columnWidths.map((columnWidth) => columnWidth * scale);
+
+    const rowOffsets = [];
+    let nextRowOffset = 0;
+    for (const rowHeight of scaledRowHeights) {
+        rowOffsets.push(nextRowOffset);
+        nextRowOffset += rowHeight + gap;
+    }
+
+    const columnOffsets = [];
+    let nextColumnOffset = 0;
+    for (const columnWidth of scaledColumnWidths) {
+        columnOffsets.push(nextColumnOffset);
+        nextColumnOffset += columnWidth + gap;
+    }
+
+    const totalWidth = scaledColumnWidths.reduce((sum, columnWidth) => sum + columnWidth, 0)
+        + (Math.max(0, numCols - 1) * gap);
+    const totalHeight = scaledRowHeights.reduce((sum, rowHeight) => sum + rowHeight, 0)
+        + (Math.max(0, numRows - 1) * gap);
+
+    const cells = images.map((image, index) => {
+        const { r, c } = getGridPosition(index, mode, numRows, numCols);
+        const cellWidth = scaledColumnWidths[c];
+        const cellHeight = scaledRowHeights[r];
+
+        return {
+            image,
+            x: columnOffsets[c],
+            y: rowOffsets[r],
+            width: cellWidth,
+            height: cellHeight,
+            renderWidth: image.width * scale,
+            renderHeight: image.height * scale,
+            imgRatio: image.width / image.height,
+            cellRatio: cellWidth / cellHeight,
+            settings,
+        };
+    });
+
+    return {
+        totalWidth,
+        totalHeight,
+        cells,
+    };
+}
+
 /**
  * Calculate Grid Layout
  * @param {Array} images - Array of image objects { width, height, ... }
@@ -48,120 +123,12 @@ export function calculateLayout(images, settings) {
 
     if (count === 0) return { totalWidth: 0, totalHeight: 0, cells: [] };
 
-    let totalWidth, totalHeight, numRows, numCols, cellWidth, cellHeight;
-
-    const targetRatio = settings.fitMode === 'original' ? 1 : calculateTargetRatio(images, settings.fitMode);
-
     if (settings.fitMode === 'original') {
-        if (mode === 'width_col') {
-            // Variable Row Height
-            numCols = Math.max(1, cols);
-            numRows = Math.ceil(count / numCols);
-            totalWidth = width;
-            cellWidth = (width - (Math.max(0, numCols - 1)) * gap) / numCols;
-
-            // 1. Calculate dimensions for all cells first
-            const cellDims = images.map(img => {
-                const h = cellWidth / (img.width / img.height);
-                return { w: cellWidth, h };
-            });
-
-            // 2. Determine Row Heights
-            const rowHeights = [];
-            for (let r = 0; r < numRows; r++) {
-                let maxH = 0;
-                for (let c = 0; c < numCols; c++) {
-                    const idx = r * numCols + c;
-                    if (idx < count) {
-                        maxH = Math.max(maxH, cellDims[idx].h);
-                    }
-                }
-                rowHeights.push(maxH);
-            }
-
-            const rowOffsets = [];
-            let currentOffset = 0;
-            for (let r = 0; r < numRows; r++) {
-                rowOffsets.push(currentOffset);
-                currentOffset += rowHeights[r] + gap;
-            }
-
-            // 3. Calculate Total Height
-            totalHeight = rowHeights.reduce((sum, h) => sum + h, 0) + (Math.max(0, numRows - 1) * gap);
-
-            // 4. Position Cells
-            const cells = images.map((img, i) => {
-                const r = Math.floor(i / numCols);
-                const c = i % numCols;
-                const x = c * (cellWidth + gap);
-
-                // Content matches cell exactly
-                return {
-                    image: img,
-                    x,
-                    y: rowOffsets[r] + (rowHeights[r] - cellDims[i].h) / 2,
-                    width: cellWidth,
-                    height: cellDims[i].h,
-                    imgRatio: img.width / img.height,
-                    cellRatio: img.width / img.height, // Matches image
-                    settings
-                };
-            });
-
-            return { totalWidth, totalHeight, cells };
-
-        } else {
-            // Variable Column Width
-            numRows = Math.max(1, rows);
-            numCols = Math.ceil(count / numRows);
-
-            totalHeight = height;
-            cellHeight = (height - (Math.max(0, numRows - 1)) * gap) / numRows;
-
-            const cellDims = images.map(img => {
-                const w = cellHeight * (img.width / img.height);
-                return { w, h: cellHeight };
-            });
-
-            const columnWidths = [];
-            for (let c = 0; c < numCols; c++) {
-                let maxW = 0;
-                for (let r = 0; r < numRows; r++) {
-                    const idx = c * numRows + r;
-                    if (idx < count) {
-                        maxW = Math.max(maxW, cellDims[idx].w);
-                    }
-                }
-                columnWidths.push(maxW);
-            }
-
-            const columnOffsets = [];
-            let currentOffset = 0;
-            for (let c = 0; c < numCols; c++) {
-                columnOffsets.push(currentOffset);
-                currentOffset += columnWidths[c] + gap;
-            }
-
-            totalWidth = columnWidths.reduce((sum, w) => sum + w, 0) + (Math.max(0, numCols - 1) * gap);
-
-            const cells = images.map((img, i) => {
-                const { r, c } = getGridPosition(i, mode, numRows, numCols);
-
-                return {
-                    image: img,
-                    x: columnOffsets[c] + (columnWidths[c] - cellDims[i].w) / 2,
-                    y: r * (cellHeight + gap),
-                    width: cellDims[i].w,
-                    height: cellHeight,
-                    imgRatio: img.width / img.height,
-                    cellRatio: img.width / img.height,
-                    settings
-                };
-            });
-
-            return { totalWidth, totalHeight, cells };
-        }
+        return calculateOriginalLayout(images, settings);
     }
+
+    let totalWidth, totalHeight, numRows, numCols, cellWidth, cellHeight;
+    const targetRatio = calculateTargetRatio(images, settings.fitMode);
 
     if (mode === 'width_col') {
         // Fixed Total Width, Fixed Cols
