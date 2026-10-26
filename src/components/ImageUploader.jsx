@@ -1,3 +1,4 @@
+import { selectImageFiles } from '../utils/imageFiles';
 import { useRef, useState } from 'react';
 import { Upload, FolderUp, Image as ImageIcon } from 'lucide-react';
 import './ImageUploader.css';
@@ -13,19 +14,6 @@ export default function ImageUploader({ onUpload, onToast, onError }) {
     const fileInputRef = useRef(null);
     const folderInputRef = useRef(null);
 
-    const notifySelectionResult = (files) => {
-        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-        const skippedCount = files.length - imageFiles.length;
-
-        if (files.length > 0 && imageFiles.length === 0) {
-            onError?.('画像ファイルを選択してください');
-        } else if (skippedCount > 0) {
-            onToast?.(`${skippedCount}件の画像以外を除外しました`, 'info');
-        }
-
-        return imageFiles;
-    };
-
     const handleDragOver = (e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -40,7 +28,7 @@ export default function ImageUploader({ onUpload, onToast, onError }) {
         e.preventDefault();
         setIsDragging(false);
 
-        const files = notifySelectionResult(Array.from(e.dataTransfer.files));
+        const files = selectImageFiles(e.dataTransfer.files, { onError, onToast });
 
         if (files.length > 0) {
             onUpload(files);
@@ -48,7 +36,7 @@ export default function ImageUploader({ onUpload, onToast, onError }) {
     };
 
     const handleFileChange = (e) => {
-        const files = notifySelectionResult(Array.from(e.target.files ?? []));
+        const files = selectImageFiles(e.target.files, { onError, onToast });
         if (files.length > 0) {
             onUpload(files);
         }
