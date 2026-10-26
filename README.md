@@ -22,12 +22,12 @@ https://github.com/user-attachments/assets/8835ed65-dc79-4dd5-ad29-455979e4ff8d
     - **Layout**: 結合画像の幅指定（Width × Col）または 高さ指定（Height × Row）
     - **Output Size**: Total Width または Total Height を指定可能。
     - **Spacing**: 背景色、透過度、画像間のマージン（Gap）調整。
-    - **Image Fit**: 各画像の比率設定。
-        - Standard: 全画像の見た目を均しやすい標準設定
-        - Portrait Priority: 縦長の画像を優先してセル内の見え方を合わせる
-        - Landscape Priority: 横長の画像を優先してセル内の見え方を合わせる
-        - Contain: 画像全体がセル内に収まるように配置
-        - No Crop: 共通縮小率で原寸比を保ったまま Output Size に収まるように配置
+    - **Image Fit**: 画像の枠や収め方を設定。
+        - Standard: 全画像の平均の縦横比で、枠をそろえます。
+        - Portrait Priority: 最も縦長の画像に合わせて、枠をそろえます。
+        - Landscape Priority: 最も横長の画像に合わせて、枠をそろえます。
+        - Contain: 画像全体を枠内に収めます。
+        - No Crop: 切り抜かず、元の大きさの比を保って並べます。
     - **Anchor Point**: 画像の切り抜き位置、または余白ができる際の画像の配置位置（中央、右下など）を指定可能。
 - **設定の保存**: Layout、Output Size、Spacing、Image Fit などの主要設定をブラウザに保存。
 - **ズーム機能**: 画面に合わせてプレビューを拡大縮小（Fit Screenでウィンドウサイズに自動調整）。

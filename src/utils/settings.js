@@ -3,27 +3,27 @@ export const FIT_MODE_OPTIONS = [
     {
         value: 'average',
         title: 'Standard',
-        description: '縦横比が混在していても、全体を均しやすい標準設定です。',
+        description: '全画像の平均の縦横比で、枠をそろえます。',
     },
     {
         value: 'portrait',
         title: 'Portrait Priority',
-        description: '縦長の画像を優先して、セル内の見え方を合わせます。',
+        description: '最も縦長の画像に合わせて、枠をそろえます。',
     },
     {
         value: 'landscape',
         title: 'Landscape Priority',
-        description: '横長の画像を優先して、セル内の見え方を合わせます。',
+        description: '最も横長の画像に合わせて、枠をそろえます。',
     },
     {
         value: 'max_dimensions',
         title: 'Contain',
-        description: '各セルの中に画像全体が収まるように表示します。',
+        description: '画像全体を枠内に収めます。',
     },
     {
         value: 'original',
         title: 'No Crop',
-        description: '画像ごとの縦横比をそのまま保って並べます。',
+        description: '切り抜かず、元の大きさの比を保って並べます。',
     },
 ];
 
