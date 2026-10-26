@@ -4,15 +4,19 @@ import './ControlPanel.css';
 
 export default function NumberStepper({ value, onChange, min = 0, max = 100, step = 1, name }) {
     const intervalRef = useRef(null);
+    const valueRef = useRef(value);
+    useEffect(() => { valueRef.current = value; }, [value]);
 
     const updateValue = (delta) => {
-        let newValue = value + delta;
+        let newValue = valueRef.current + delta;
         if (min !== undefined) newValue = Math.max(min, newValue);
         if (max !== undefined) newValue = Math.min(max, newValue);
+        valueRef.current = newValue;
         onChange({ target: { name, value: newValue, type: 'number' } });
     };
 
     const handleMouseDown = (delta) => {
+        handleMouseUp();
         updateValue(delta);
         intervalRef.current = setInterval(() => {
             updateValue(delta);
@@ -43,7 +47,10 @@ export default function NumberStepper({ value, onChange, min = 0, max = 100, ste
         <div className="number-stepper">
             <button
                 className="stepper-btn"
-                onPointerDown={() => handleMouseDown(-step)}
+                onPointerDown={(event) => { if (event.button === 0) handleMouseDown(-step); }}
+                onClick={(event) => { if (event.detail === 0) updateValue(-step); }}
+                onPointerCancel={handleMouseUp}
+                onBlur={handleMouseUp}
                 onPointerUp={handleMouseUp}
                 onPointerLeave={handleMouseUp}
                 aria-label="Decrease"
@@ -56,13 +63,17 @@ export default function NumberStepper({ value, onChange, min = 0, max = 100, ste
                 value={value}
                 onChange={handleInputChange}
                 name={name}
+                aria-label={name === 'cols' ? 'Columns' : 'Rows'}
                 min={min}
                 max={max}
                 step={step}
             />
             <button
                 className="stepper-btn"
-                onPointerDown={() => handleMouseDown(step)}
+                onPointerDown={(event) => { if (event.button === 0) handleMouseDown(step); }}
+                onClick={(event) => { if (event.detail === 0) updateValue(step); }}
+                onPointerCancel={handleMouseUp}
+                onBlur={handleMouseUp}
                 onPointerUp={handleMouseUp}
                 onPointerLeave={handleMouseUp}
                 aria-label="Increase"

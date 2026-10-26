@@ -133,9 +133,9 @@
     border-color: transparent;
 }
 
-button:focus,
 button:focus-visible {
-    outline: none !important;
+    outline: 2px solid var(--accent-color);
+    outline-offset: 3px;
 }
 
 .text-btn.active {
