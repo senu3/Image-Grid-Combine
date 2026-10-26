@@ -1,3 +1,4 @@
+import { DEFAULT_SETTINGS, normalizeStoredSettings } from './utils/settings'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Download, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import ImageUploader from './components/ImageUploader'
@@ -6,61 +7,8 @@ import PreviewCanvas from './components/PreviewCanvas'
 import NumberStepper from './components/NumberStepper'
 import './App.css'
 
-const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 768
+const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth <= 768
 const SETTINGS_STORAGE_KEY = 'image-grid-combine:settings:v1'
-const VALID_MODES = new Set(['width_col', 'height_row'])
-const VALID_FIT_MODES = new Set(['average', 'portrait', 'landscape', 'max_dimensions', 'original'])
-const VALID_ANCHORS = new Set([
-  'top-left',
-  'top-center',
-  'top-right',
-  'center-left',
-  'center',
-  'center-right',
-  'bottom-left',
-  'bottom-center',
-  'bottom-right'
-])
-
-const DEFAULT_SETTINGS = {
-  mode: 'width_col',
-  width: 1200,
-  rows: 2,
-  height: 1600,
-  cols: 3,
-  gap: 0,
-  backgroundColor: '#ffffff',
-  backgroundAlpha: 100,
-  fitMode: 'average',
-  anchor: 'center'
-}
-
-function getStoredNumber(value, fallback) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
-}
-
-function getStoredPercent(value, fallback) {
-  return Math.min(100, Math.max(0, getStoredNumber(value, fallback)))
-}
-
-function normalizeStoredSettings(candidate) {
-  const nextSettings = candidate && typeof candidate === 'object' ? candidate : {}
-
-  return {
-    mode: VALID_MODES.has(nextSettings.mode) ? nextSettings.mode : DEFAULT_SETTINGS.mode,
-    width: getStoredNumber(nextSettings.width, DEFAULT_SETTINGS.width),
-    rows: getStoredNumber(nextSettings.rows, DEFAULT_SETTINGS.rows),
-    height: getStoredNumber(nextSettings.height, DEFAULT_SETTINGS.height),
-    cols: getStoredNumber(nextSettings.cols, DEFAULT_SETTINGS.cols),
-    gap: getStoredNumber(nextSettings.gap, DEFAULT_SETTINGS.gap),
-    backgroundColor: typeof nextSettings.backgroundColor === 'string'
-      ? nextSettings.backgroundColor
-      : DEFAULT_SETTINGS.backgroundColor,
-    backgroundAlpha: getStoredPercent(nextSettings.backgroundAlpha, DEFAULT_SETTINGS.backgroundAlpha),
-    fitMode: VALID_FIT_MODES.has(nextSettings.fitMode) ? nextSettings.fitMode : DEFAULT_SETTINGS.fitMode,
-    anchor: VALID_ANCHORS.has(nextSettings.anchor) ? nextSettings.anchor : DEFAULT_SETTINGS.anchor
-  }
-}
 
 function loadStoredSettings() {
   if (typeof window === 'undefined') {
@@ -83,7 +31,8 @@ function App() {
   const [images, setImages] = useState([])
   const imagesRef = useRef(images)
   const previewSaveActionRef = useRef(null)
-  const [hasMixedAspectRatios, setHasMixedAspectRatios] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const savingRef = useRef(false)
   const [toast, setToast] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
   const toastTimeoutRef = useRef(null)
@@ -175,7 +124,6 @@ function App() {
 
   const clearImages = useCallback(() => {
     clearError()
-    setHasMixedAspectRatios(false)
     updateImages([])
   }, [clearError, updateImages])
 
@@ -209,26 +157,32 @@ function App() {
   }, [updateImages])
 
   const handleSettingsChange = useCallback((nextSettings) => {
-    setSettings(nextSettings)
+    setSettings(normalizeStoredSettings(nextSettings))
   }, [])
 
   const handleSettingInputChange = useCallback((e) => {
     const { name, value, type } = e.target
     const isNumber = type === 'number' || type === 'range'
 
-    setSettings((currentSettings) => ({
+    setSettings((currentSettings) => normalizeStoredSettings({
       ...currentSettings,
-      [name]: isNumber ? parseInt(value, 10) || 0 : value
+      [name]: isNumber ? Number(value) : value
     }))
   }, [])
 
-  const handleAspectRatioVariationChange = useCallback((nextHasMixedAspectRatios) => {
-    setHasMixedAspectRatios(nextHasMixedAspectRatios)
-  }, [])
-
-  const handleSaveImage = useCallback(() => {
-    previewSaveActionRef.current?.()
-  }, [])
+  const handleSaveImage = useCallback(async () => {
+    if (savingRef.current || !previewSaveActionRef.current) return
+    savingRef.current = true
+    setIsSaving(true)
+    try {
+      await previewSaveActionRef.current()
+    } catch {
+      showError('保存に失敗しました。出力サイズを小さくして再試行してください')
+    } finally {
+      savingRef.current = false
+      setIsSaving(false)
+    }
+  }, [showError])
 
   const handlePreviewSaveActionChange = useCallback((saveAction) => {
     previewSaveActionRef.current = saveAction
@@ -253,11 +207,12 @@ function App() {
           <button
             className="btn-primary header-save-btn"
             onClick={handleSaveImage}
-            disabled={images.length === 0}
-            aria-label="Save Image"
+            disabled={images.length === 0 || isSaving}
+            aria-busy={isSaving}
+            aria-label={isSaving ? 'Saving Image' : 'Save Image'}
           >
             <Download size={16} />
-            <span className="header-action-label">Save Image</span>
+            <span className="header-action-label">{isSaving ? 'Saving…' : 'Save Image'}</span>
           </button>
         </div>
       </header>
@@ -316,8 +271,8 @@ function App() {
             onInputChange={handleSettingInputChange}
             onClearAll={handleClearAll}
             hasImages={images.length > 0}
-            showImageFitSection={images.length > 0 && hasMixedAspectRatios}
-            showImageFitHint={images.length === 0 || !hasMixedAspectRatios}
+            showImageFitSection={images.length > 0}
+            showImageFitHint={false}
             isOpen={isSettingsOpen}
             onToggle={() => setIsSettingsOpen((currentValue) => !currentValue)}
           />
@@ -336,7 +291,6 @@ function App() {
                 onRemove={handleRemove}
                 onAdd={handleUpload}
                 onUpdateImages={updateImages}
-                onAspectRatioVariationChange={handleAspectRatioVariationChange}
                 onToast={showToast}
                 onError={showError}
                 onErrorClear={clearError}

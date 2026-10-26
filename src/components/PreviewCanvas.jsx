@@ -1,3 +1,4 @@
+import { getExportSize } from '../utils/exportSize';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
     ZoomIn,
@@ -763,6 +764,8 @@ export default function PreviewCanvas({
             })
         );
 
+        if (!isMountedRef.current) return;
+
         if (exportImages.some((image) => image.width == null || image.height == null)) {
             onToast?.('画像の読み込み完了後に保存してください', 'info');
             return;
@@ -774,54 +777,68 @@ export default function PreviewCanvas({
         }
 
         const exportLayout = calculateLayout(exportImages, settings);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(exportLayout.totalWidth));
-        canvas.height = Math.max(1, Math.round(exportLayout.totalHeight));
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            onError?.('保存に失敗しました');
+        let exportSize;
+        try {
+            exportSize = getExportSize(exportLayout);
+        } catch (error) {
+            onError?.(error.message);
             return;
         }
+        const canvas = document.createElement('canvas');
+        try {
+            canvas.width = exportSize.width;
+            canvas.height = exportSize.height;
 
-        ctx.fillStyle = backgroundFillColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        exportLayout.cells.forEach((cell) => {
-            const asset = imageAssetCacheRef.current.get(cell.image.id);
-            if (!asset?.drawable) {
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                onError?.('保存に失敗しました');
                 return;
             }
 
-            const { renderW, renderH, renderX, renderY } = getCellImagePlacement(cell, settings.anchor);
+            ctx.fillStyle = backgroundFillColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(cell.x, cell.y, cell.width, cell.height);
-            ctx.clip();
-            ctx.drawImage(asset.drawable, cell.x + renderX, cell.y + renderY, renderW, renderH);
-            ctx.restore();
-        });
+            exportLayout.cells.forEach((cell) => {
+                const asset = imageAssetCacheRef.current.get(cell.image.id);
+                if (!asset?.drawable) {
+                    throw new Error('画像が変更されました。もう一度保存してください');
+                }
 
-        const blob = await new Promise((resolve) => {
-            canvas.toBlob(resolve, 'image/png');
-        });
+                const { renderW, renderH, renderX, renderY } = getCellImagePlacement(cell, settings.anchor);
 
-        if (!blob) {
-            onError?.('保存に失敗しました');
-            return;
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(cell.x, cell.y, cell.width, cell.height);
+                ctx.clip();
+                ctx.drawImage(asset.drawable, cell.x + renderX, cell.y + renderY, renderW, renderH);
+                ctx.restore();
+            });
+
+            const blob = await new Promise((resolve) => {
+                canvas.toBlob(resolve, 'image/png');
+            });
+
+            if (!blob) {
+                onError?.('保存に失敗しました');
+                return;
+            }
+
+            if (!isMountedRef.current) return;
+
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = `grid_combine_${Date.now()}.png`;
+            link.href = downloadUrl;
+            try {
+                link.click();
+                onErrorClear?.();
+            } finally {
+                setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+            }
+        } finally {
+            canvas.width = 0;
+            canvas.height = 0;
         }
-
-        const downloadUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = `grid_combine_${Date.now()}.png`;
-        link.href = downloadUrl;
-        link.click();
-        onErrorClear?.();
-
-        setTimeout(() => {
-            URL.revokeObjectURL(downloadUrl);
-        }, 0);
     }, [backgroundFillColor, ensureImageAsset, images, onError, onErrorClear, onToast, settings]);
 
     useEffect(() => {
@@ -913,7 +930,9 @@ export default function PreviewCanvas({
                 </div>
             ) : null}
             <div className="canvas-scroll-area" ref={scrollAreaRef}>
-                {hasPendingImageMetadata ? (
+                {layout.error ? (
+                    <div className="preview-loading" role="alert">{layout.error}</div>
+                ) : hasPendingImageMetadata ? (
                     <div className="preview-loading">
                         <span>Loading image dimensions...</span>
                     </div>

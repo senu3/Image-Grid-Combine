@@ -1,3 +1,5 @@
+import { normalizeStoredSettings } from './settings.js';
+
 /**
  * Calculate target aspect ratio based on fit mode
  * @param {Array} images - Array of image objects { width, height, ... }
@@ -111,6 +113,15 @@ function calculateOriginalLayout(images, settings) {
     };
 }
 
+function validateLayout(layout) {
+    const positive = (value) => Number.isFinite(value) && value > 0;
+    if (!positive(layout.totalWidth) || !positive(layout.totalHeight) ||
+        layout.cells.some((cell) => !positive(cell.width) || !positive(cell.height))) {
+        return { totalWidth: 0, totalHeight: 0, cells: [], error: '配置サイズが無効です。出力サイズとGapを調整してください' };
+    }
+    return layout;
+}
+
 /**
  * Calculate Grid Layout
  * @param {Array} images - Array of image objects { width, height, ... }
@@ -118,13 +129,19 @@ function calculateOriginalLayout(images, settings) {
  * @returns {Object} { totalWidth, totalHeight, cells: [{ x, y, width, height, image }] }
  */
 export function calculateLayout(images, settings) {
+    settings = normalizeStoredSettings(settings);
     const { width, height, rows, cols, gap, mode } = settings;
     const count = images.length;
 
     if (count === 0) return { totalWidth: 0, totalHeight: 0, cells: [] };
 
+    const tracks = mode === 'width_col' ? cols : rows;
+    const size = mode === 'width_col' ? width : height;
+    if (size - (tracks - 1) * gap <= 0) {
+        return { totalWidth: 0, totalHeight: 0, cells: [], error: '余白が出力サイズ以上です。Gapまたは行・列数を減らしてください' };
+    }
     if (settings.fitMode === 'original') {
-        return calculateOriginalLayout(images, settings);
+        return validateLayout(calculateOriginalLayout(images, settings));
     }
 
     let totalWidth, totalHeight, numRows, numCols, cellWidth, cellHeight;
@@ -174,9 +191,9 @@ export function calculateLayout(images, settings) {
         };
     });
 
-    return {
+    return validateLayout({
         totalWidth,
         totalHeight,
         cells
-    };
+    });
 }

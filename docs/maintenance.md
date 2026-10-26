@@ -6,6 +6,7 @@
 
 ```bash
 npm run dev
+npm run test
 npm run lint
 npm run build
 ```
@@ -38,7 +39,7 @@ npm run build
   - 変更する場合は `ControlPanel.jsx` の range / number / `handleChange` を同時に揃える。
 - `max_dimensions` は contain 表示、それ以外は基本 cover 表示。
 - `original` は画像ごとの原寸比を保持したまま、行高・列幅の累積から共通縮小率を決めて Output Size に収める。
-- `Image Fit` セクションは、入力画像の縦横比が混在しているときだけ表示する。
+- `Image Fit` は画像があるとき常に表示する。同じ縦横比でも原寸が違うと `original` の配置が変わる。
 - 背景は `backgroundColor` と `backgroundAlpha` を別管理している。
   - preview と export の両方で同じ rgba 値を使う。
 
@@ -62,3 +63,10 @@ npm run build
   - 行や列の累積値で済むものは都度足し込みに戻さない方がよい。
 - SEO の基本設定は `index.html` と `public/robots.txt` / `public/sitemap.xml` にある。
   - GitHub Pages の URL やリポジトリ名を変えたら、README のリンクとあわせて更新する。
+
+## 入力・保存の制限
+
+- `src/utils/settings.js` で入力と保存設定の復元を正規化する。幅・高さは1〜10,000、行・列数は1〜100の整数、Gapは−100〜100。
+- 余白の合計が指定寸法以上になる場合は配置を中止し、プレビューに説明を表示する。
+- `src/utils/exportSize.js` でPNG保存前に両辺16,384px以下・合計1,600万画素以下を検証する。これはアプリのメモリ予算であり、全ブラウザでの成功保証ではない。
+- 保存はApp側で同時実行を防止し、例外を通知する。成功・失敗ともにロックを解除し、Canvasを解放する。
