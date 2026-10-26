@@ -1,8 +1,9 @@
+import { memo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { getCellImagePlacement } from '../utils/imagePlacement';
 
-export default function SortableImage({ id, cell, zoom }) {
+function SortableImage({ id, cell, zoom }) {
     const {
         attributes,
         listeners,
@@ -57,3 +58,5 @@ export default function SortableImage({ id, cell, zoom }) {
     );
 }
 
+
+export default memo(SortableImage);

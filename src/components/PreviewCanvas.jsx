@@ -44,14 +44,18 @@ export default function PreviewCanvas({
 }) {
     const [sortState, setSortState] = useState(0);
     const [isDragDeleteHintDismissed, setIsDragDeleteHintDismissed] = useState(loadDismissedDragDeleteHint);
-    const { loadedImages, hasPendingImageMetadata, ensureImageAsset, getAsset, isActive } = useImageAssets(images, { onError, onToast });
+    const { loadedImages, hasPendingImageMetadata, pendingImageCount, ensureImageAsset, getAsset, isActive } = useImageAssets(images, { onError, onToast });
+    const { mode, width, height, rows, cols, gap, fitMode, anchor } = settings;
+    const layoutSettings = useMemo(() => ({ mode, width, height, rows, cols, gap, fitMode, anchor }),
+        [mode, width, height, rows, cols, gap, fitMode, anchor]);
+    const imageIds = useMemo(() => images.map((image) => image.id), [images]);
     const layout = useMemo(() => {
         if (images.length === 0 || hasPendingImageMetadata) {
             return { totalWidth: 0, totalHeight: 0, cells: [] };
         }
 
-        return calculateLayout(loadedImages, settings);
-    }, [hasPendingImageMetadata, images.length, loadedImages, settings]);
+        return calculateLayout(loadedImages, layoutSettings);
+    }, [hasPendingImageMetadata, images.length, loadedImages, layoutSettings]);
     const backgroundFillColor = toRgbaColor(settings.backgroundColor, settings.backgroundAlpha);
 
     const zoomControls = usePreviewZoom(layout, hasPendingImageMetadata);
@@ -159,8 +163,8 @@ export default function PreviewCanvas({
                 {layout.error ? (
                     <div className="preview-loading" role="alert">{layout.error}</div>
                 ) : hasPendingImageMetadata ? (
-                    <div className="preview-loading">
-                        <span>Loading image dimensions...</span>
+                    <div className="preview-loading" role="status" aria-live="polite">
+                        <span>画像を読み込み中… {images.length - pendingImageCount} / {images.length}</span>
                     </div>
                 ) : (
                     <div
@@ -190,7 +194,7 @@ export default function PreviewCanvas({
                                 onDragEnd={handleDragEnd}
                             >
                                 <SortableContext
-                                    items={images.map((image) => image.id)}
+                                    items={imageIds}
                                     strategy={rectSortingStrategy}
                                 >
                                     {layout.cells.map((cell) => (

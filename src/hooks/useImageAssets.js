@@ -1,17 +1,12 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { createTaskQueue } from '../utils/taskQueue';
+import { createBatchUpdates } from '../utils/batchUpdates';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { loadImageAsset, disposeImageAsset } from '../utils/imageAssets';
 
 function imageAssetsReducer(state, action) {
     switch (action.type) {
-        case 'upsert':
-            if (state[action.id] === action.asset) {
-                return state;
-            }
-
-            return {
-                ...state,
-                [action.id]: action.asset,
-            };
+        case 'upsertMany':
+            return { ...state, ...Object.fromEntries(action.entries) };
 
         case 'prune': {
             let hasChanges = false;
@@ -44,6 +39,10 @@ export function useImageAssets(images, { onError, onToast }) {
     const imageLoadControllersRef = useRef(new Map());
 
     const [imageAssets, dispatchImageAssets] = useReducer(imageAssetsReducer, {});
+    const [enqueue] = useState(() => createTaskQueue(4));
+    const [updates] = useState(() => createBatchUpdates((entries) => {
+        dispatchImageAssets({ type: 'upsertMany', entries });
+    }));
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -53,13 +52,14 @@ export function useImageAssets(images, { onError, onToast }) {
 
         return () => {
             isMountedRef.current = false;
+            updates.clear();
             imageLoadControllers.forEach((controller) => controller.abort());
             imageLoadControllers.clear();
             imageLoadPromises.clear();
             imageAssetCache.forEach((asset) => disposeImageAsset(asset));
             imageAssetCache.clear();
         };
-    }, []);
+    }, [updates]);
 
     const ensureImageAsset = useCallback((image) => {
         const cachedAsset = imageAssetCacheRef.current.get(image.id);
@@ -75,7 +75,9 @@ export function useImageAssets(images, { onError, onToast }) {
         const controller = new AbortController();
         imageLoadControllersRef.current.set(image.id, controller);
 
-        const loadPromise = loadImageAsset(image, controller.signal).then((asset) => {
+        const loadPromise = enqueue(() => loadImageAsset(image, controller.signal), controller.signal)
+        .catch(() => controller.signal.aborted ? null : ({ drawable: null, width: 100, height: 100, status: 'error' }))
+        .then((asset) => {
             if (!asset) {
                 return null;
             }
@@ -92,7 +94,7 @@ export function useImageAssets(images, { onError, onToast }) {
             imageAssetCacheRef.current.set(image.id, asset);
 
             if (isMountedRef.current) {
-                dispatchImageAssets({ type: 'upsert', id: image.id, asset });
+                updates.add(image.id, asset);
             }
 
             return asset;
@@ -105,7 +107,7 @@ export function useImageAssets(images, { onError, onToast }) {
 
         imageLoadPromisesRef.current.set(image.id, loadPromise);
         return loadPromise;
-    }, []);
+    }, [enqueue, updates]);
 
     useEffect(() => {
         const nextActiveIds = new Set(images.map((image) => image.id));
@@ -119,6 +121,7 @@ export function useImageAssets(images, { onError, onToast }) {
 
         for (const [id, asset] of imageAssetCacheRef.current.entries()) {
             if (!nextActiveIds.has(id)) {
+                updates.remove(id);
                 disposeImageAsset(asset);
                 imageAssetCacheRef.current.delete(id);
             }
@@ -137,7 +140,7 @@ export function useImageAssets(images, { onError, onToast }) {
                 void ensureImageAsset(image);
             }
         });
-    }, [images, ensureImageAsset]);
+    }, [images, ensureImageAsset, updates]);
 
     const loadedImages = useMemo(() => {
         return images.map((image) => {
@@ -151,7 +154,8 @@ export function useImageAssets(images, { onError, onToast }) {
         });
     }, [images, imageAssets]);
 
-    const hasPendingImageMetadata = loadedImages.some((image) => image.width == null || image.height == null);
+    const pendingImageCount = loadedImages.filter((image) => image.width == null || image.height == null).length;
+    const hasPendingImageMetadata = pendingImageCount > 0;
     const failedImageCount = loadedImages.filter((image) => imageAssets[image.id]?.status === 'error').length;
     const allImagesFailedToLoad = images.length > 0 && !hasPendingImageMetadata && failedImageCount === images.length;
 
@@ -195,5 +199,5 @@ export function useImageAssets(images, { onError, onToast }) {
 
     const getAsset = useCallback((id) => imageAssetCacheRef.current.get(id), []);
     const isActive = useCallback(() => isMountedRef.current, []);
-    return { loadedImages, hasPendingImageMetadata, ensureImageAsset, getAsset, isActive };
+    return { loadedImages, hasPendingImageMetadata, pendingImageCount, ensureImageAsset, getAsset, isActive };
 }
