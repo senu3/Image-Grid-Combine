@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, normalizeStoredSettings } from './utils/settings'
+import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Download, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import ImageUploader from './components/ImageUploader'
@@ -8,25 +8,6 @@ import NumberStepper from './components/NumberStepper'
 import './App.css'
 
 const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth <= 768
-const SETTINGS_STORAGE_KEY = 'image-grid-combine:settings:v1'
-
-function loadStoredSettings() {
-  if (typeof window === 'undefined') {
-    return { ...DEFAULT_SETTINGS }
-  }
-
-  try {
-    const rawSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
-    if (!rawSettings) {
-      return { ...DEFAULT_SETTINGS }
-    }
-
-    return normalizeStoredSettings(JSON.parse(rawSettings))
-  } catch {
-    return { ...DEFAULT_SETTINGS }
-  }
-}
-
 function App() {
   const [images, setImages] = useState([])
   const imagesRef = useRef(images)
@@ -39,19 +20,11 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
     return !isMobileViewport()
   })
-  const [settings, setSettings] = useState(loadStoredSettings)
+  const { settings, handleSettingsChange, handleSettingInputChange } = usePersistedSettings()
 
   useEffect(() => {
     imagesRef.current = images
   }, [images])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
-    } catch {
-      // Ignore storage failures so the app remains usable.
-    }
-  }, [settings])
 
   useEffect(() => {
     return () => {
@@ -156,20 +129,6 @@ function App() {
     updateImages((currentImages) => currentImages.filter((image) => image.id !== id))
   }, [updateImages])
 
-  const handleSettingsChange = useCallback((nextSettings) => {
-    setSettings(normalizeStoredSettings(nextSettings))
-  }, [])
-
-  const handleSettingInputChange = useCallback((e) => {
-    const { name, value, type } = e.target
-    const isNumber = type === 'number' || type === 'range'
-
-    setSettings((currentSettings) => normalizeStoredSettings({
-      ...currentSettings,
-      [name]: isNumber ? Number(value) : value
-    }))
-  }, [])
-
   const handleSaveImage = useCallback(async () => {
     if (savingRef.current || !previewSaveActionRef.current) return
     savingRef.current = true
@@ -271,8 +230,6 @@ function App() {
             onInputChange={handleSettingInputChange}
             onClearAll={handleClearAll}
             hasImages={images.length > 0}
-            showImageFitSection={images.length > 0}
-            showImageFitHint={false}
             isOpen={isSettingsOpen}
             onToggle={() => setIsSettingsOpen((currentValue) => !currentValue)}
           />

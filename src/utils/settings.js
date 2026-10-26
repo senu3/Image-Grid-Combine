@@ -1,6 +1,34 @@
 const VALID_MODES = new Set(['width_col', 'height_row'])
-const VALID_FIT_MODES = new Set(['average', 'portrait', 'landscape', 'max_dimensions', 'original'])
-const VALID_ANCHORS = new Set([
+export const FIT_MODE_OPTIONS = [
+    {
+        value: 'average',
+        title: 'Standard',
+        description: '縦横比が混在していても、全体を均しやすい標準設定です。',
+    },
+    {
+        value: 'portrait',
+        title: 'Portrait Priority',
+        description: '縦長の画像を優先して、セル内の見え方を合わせます。',
+    },
+    {
+        value: 'landscape',
+        title: 'Landscape Priority',
+        description: '横長の画像を優先して、セル内の見え方を合わせます。',
+    },
+    {
+        value: 'max_dimensions',
+        title: 'Contain',
+        description: '各セルの中に画像全体が収まるように表示します。',
+    },
+    {
+        value: 'original',
+        title: 'No Crop',
+        description: '画像ごとの縦横比をそのまま保って並べます。',
+    },
+];
+
+const VALID_FIT_MODES = new Set(FIT_MODE_OPTIONS.map(option => option.value))
+export const ANCHORS = [
   'top-left',
   'top-center',
   'top-right',
@@ -10,7 +38,8 @@ const VALID_ANCHORS = new Set([
   'bottom-left',
   'bottom-center',
   'bottom-right'
-])
+]
+const VALID_ANCHORS = new Set(ANCHORS)
 
 export const DEFAULT_SETTINGS = {
   mode: 'width_col',

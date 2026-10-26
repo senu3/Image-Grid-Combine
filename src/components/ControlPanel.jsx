@@ -1,38 +1,11 @@
-import { LayoutGrid, Grid3x3, Maximize, Crosshair, Image, Monitor, Trash2, X } from 'lucide-react';
+import { FIT_MODE_OPTIONS, ANCHORS } from '../utils/settings';
+import { LayoutGrid, Grid3x3, Maximize, Image, Monitor, Trash2, X } from 'lucide-react';
 import NumberStepper from './NumberStepper';
 import './ControlPanel.css';
 
-const FIT_MODE_OPTIONS = [
-    {
-        value: 'average',
-        title: 'Standard',
-        description: '縦横比が混在していても、全体を均しやすい標準設定です。',
-    },
-    {
-        value: 'portrait',
-        title: 'Portrait Priority',
-        description: '縦長の画像を優先して、セル内の見え方を合わせます。',
-    },
-    {
-        value: 'landscape',
-        title: 'Landscape Priority',
-        description: '横長の画像を優先して、セル内の見え方を合わせます。',
-    },
-    {
-        value: 'max_dimensions',
-        title: 'Contain',
-        description: '各セルの中に画像全体が収まるように表示します。',
-    },
-    {
-        value: 'original',
-        title: 'No Crop',
-        description: '画像ごとの縦横比をそのまま保って並べます。',
-    },
-];
-
 /**
  * ControlPanel Component
- * Settings for grid layout (Width x Rows or Height x Cols).
+ * Settings for grid layout (Width x Columns or Height x Rows).
  */
 export default function ControlPanel({
     settings,
@@ -40,19 +13,11 @@ export default function ControlPanel({
     onInputChange,
     onClearAll,
     hasImages = false,
-    showImageFitSection = true,
-    showImageFitHint = false,
     isOpen = true,
     onToggle
 }) {
-    const handleChange = onInputChange ?? ((e) => {
-        const { name, value, type } = e.target;
-        const isNumber = type === 'number' || type === 'range';
-        onSettingsChange({
-            ...settings,
-            [name]: isNumber ? parseInt(value, 10) || 0 : value
-        });
-    });
+    const handleChange = onInputChange;
+    const sizeName = settings.mode === 'width_col' ? 'width' : 'height';
 
     return (
         <div className={`control-panel-shell ${isOpen ? 'open' : 'closed'}`}>
@@ -116,59 +81,9 @@ export default function ControlPanel({
 
                 <div className="section">
                     <h3><Monitor size={18} /> Output Size</h3>
-                    <div className="desktop-output-size-field">
-                        {settings.mode === 'width_col' ? (
-                            <div className="input-group">
-                                <label>Total Width (px)</label>
-                                <input
-                                    type="number"
-                                    name="width"
-                                    value={settings.width}
-                                    onChange={handleChange}
-                                    min="1"
-                                    max="10000"
-                                />
-                            </div>
-                        ) : (
-                            <div className="input-group">
-                                <label>Total Height (px)</label>
-                                <input
-                                    type="number"
-                                    name="height"
-                                    value={settings.height}
-                                    onChange={handleChange}
-                                    min="1"
-                                    max="10000"
-                                />
-                            </div>
-                        )}
-                    </div>
-                    <div className="mobile-output-size-field">
-                        {settings.mode === 'width_col' ? (
-                            <div className="input-group">
-                                <label>Total Width (px)</label>
-                                <input
-                                    type="number"
-                                    name="width"
-                                    value={settings.width}
-                                    onChange={handleChange}
-                                    min="1"
-                                    max="10000"
-                                />
-                            </div>
-                        ) : (
-                            <div className="input-group">
-                                <label>Total Height (px)</label>
-                                <input
-                                    type="number"
-                                    name="height"
-                                    value={settings.height}
-                                    onChange={handleChange}
-                                    min="1"
-                                    max="10000"
-                                />
-                            </div>
-                        )}
+                    <div className="input-group">
+                        <label htmlFor="output-size">{sizeName === 'width' ? 'Total Width (px)' : 'Total Height (px)'}</label>
+                        <input id="output-size" type="number" name={sizeName} value={settings[sizeName]} onChange={handleChange} min="1" max="10000" />
                     </div>
                 </div>
 
@@ -222,60 +137,48 @@ export default function ControlPanel({
                     </div>
                 </div>
 
-                {showImageFitHint ? (
-                    <div className="section image-fit-hint-section">
-                        <div className="image-fit-hint-row">
-                            <Maximize size={16} />
-                            <span>縦横比が異なる画像を追加すると、画像フィット設定が表示されます。</span>
+                <div className="section">
+                    <h3><Maximize size={18} /> Image Fit</h3>
+                    <div className="input-group">
+                        <label className="control-label">Fit Style</label>
+                        <div className="fit-mode-options" role="radiogroup" aria-label="Fit Style">
+                            {FIT_MODE_OPTIONS.map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    role="radio"
+                                    className={`fit-mode-option ${settings.fitMode === option.value ? 'active' : ''}`}
+                                    onClick={() => onSettingsChange({ ...settings, fitMode: option.value })}
+                                    aria-checked={settings.fitMode === option.value}
+                                >
+                                    <span className="fit-mode-title">{option.title}</span>
+                                    <span className="fit-mode-description">{option.description}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
-                ) : null}
 
-                {showImageFitSection ? (
-                    <div className="section">
-                        <h3><Maximize size={18} /> Image Fit</h3>
-                        <div className="input-group">
-                            <label className="control-label">Fit Style</label>
-                            <div className="fit-mode-options" role="radiogroup" aria-label="Fit Style">
-                                {FIT_MODE_OPTIONS.map((option) => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        role="radio"
-                                        className={`fit-mode-option ${settings.fitMode === option.value ? 'active' : ''}`}
-                                        onClick={() => onSettingsChange({ ...settings, fitMode: option.value })}
-                                        aria-checked={settings.fitMode === option.value}
-                                    >
-                                        <span className="fit-mode-title">{option.title}</span>
-                                        <span className="fit-mode-description">{option.description}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="input-group">
-                            <label className="control-label">Anchor Point</label>
-                            <div className="anchor-visualizer">
-                                <Image className="anchor-bg-icon" aria-hidden="true" />
-                                <div className="anchor-grid">
-                                    {['top-left', 'top-center', 'top-right',
-                                        'center-left', 'center', 'center-right',
-                                        'bottom-left', 'bottom-center', 'bottom-right'].map(pos => (
-                                            <button
-                                                key={pos}
-                                                type="button"
-                                                className={`anchor-btn ${settings.anchor === pos ? 'active' : ''}`}
-                                                onClick={() => onSettingsChange({ ...settings, anchor: pos })}
-                                                title={pos}
-                                            >
-                                                <div className="dot" />
-                                            </button>
-                                        ))}
-                                </div>
+                    <div className="input-group">
+                        <label className="control-label">Anchor Point</label>
+                        <div className="anchor-visualizer">
+                            <Image className="anchor-bg-icon" aria-hidden="true" />
+                            <div className="anchor-grid">
+                                {ANCHORS.map(pos => (
+                                        <button
+                                            key={pos}
+                                            type="button"
+                                            className={`anchor-btn ${settings.anchor === pos ? 'active' : ''}`}
+                                            onClick={() => onSettingsChange({ ...settings, anchor: pos })}
+                                            title={pos}
+                                        >
+                                            <div className="dot" />
+                                        </button>
+                                    ))}
                             </div>
                         </div>
                     </div>
-                ) : null}
+                </div>
+
 
                 {hasImages ? (
                     <div className="section mobile-clear-all-section">
