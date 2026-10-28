@@ -1,9 +1,11 @@
+import NumberInput from './NumberInput';
 import { Minus, Plus } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import './ControlPanel.css';
 
 export default function NumberStepper({ value, onChange, min = 0, max = 100, step = 1, name }) {
     const intervalRef = useRef(null);
+    const inputRef = useRef(null);
     const valueRef = useRef(value);
     useEffect(() => { valueRef.current = value; }, [value]);
 
@@ -17,6 +19,7 @@ export default function NumberStepper({ value, onChange, min = 0, max = 100, ste
 
     const handleMouseDown = (delta) => {
         handleMouseUp();
+        inputRef.current?.blur();
         updateValue(delta);
         intervalRef.current = setInterval(() => {
             updateValue(delta);
@@ -34,13 +37,9 @@ export default function NumberStepper({ value, onChange, min = 0, max = 100, ste
         return () => handleMouseUp();
     }, []);
 
-    const handleInputChange = (e) => {
-        const newValue = parseInt(e.target.value, 10);
-        if (!isNaN(newValue)) {
-            onChange({ target: { name, value: newValue, type: 'number' } });
-        } else if (e.target.value === '') {
-            onChange({ target: { name, value: 0, type: 'number' } });
-        }
+    const handleInputChange = (event) => {
+        valueRef.current = Number(event.target.value);
+        onChange(event);
     };
 
     return (
@@ -57,7 +56,9 @@ export default function NumberStepper({ value, onChange, min = 0, max = 100, ste
             >
                 <Minus size={14} />
             </button>
-            <input
+            <NumberInput
+                key={name}
+                ref={inputRef}
                 className="stepper-input"
                 type="number"
                 value={value}

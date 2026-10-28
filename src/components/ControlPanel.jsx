@@ -1,3 +1,4 @@
+import NumberInput from './NumberInput';
 import { FIT_MODE_OPTIONS, ANCHORS } from '../utils/settings';
 import { LayoutGrid, Grid3x3, Maximize, Image, Monitor, Trash2, X } from 'lucide-react';
 import NumberStepper from './NumberStepper';
@@ -83,7 +84,7 @@ export default function ControlPanel({
                     <h3><Monitor size={18} /> Output Size</h3>
                     <div className="input-group">
                         <label htmlFor="output-size">{sizeName === 'width' ? 'Total Width (px)' : 'Total Height (px)'}</label>
-                        <input id="output-size" type="number" name={sizeName} value={settings[sizeName]} onChange={handleChange} min="1" max="10000" />
+                        <NumberInput key={sizeName} id="output-size" type="number" name={sizeName} value={settings[sizeName]} onChange={handleChange} min="1" max="10000" />
                     </div>
                 </div>
 
@@ -124,7 +125,7 @@ export default function ControlPanel({
                         </div>
                         <div className="input-group spacing-background-opacity">
                             <label>Opacity (%)</label>
-                            <input
+                            <NumberInput
                                 type="number"
                                 name="backgroundAlpha"
                                 value={settings.backgroundAlpha}
