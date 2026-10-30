@@ -3,27 +3,27 @@ export const FIT_MODE_OPTIONS = [
     {
         value: 'average',
         title: 'Standard',
-        description: '全画像の平均の縦横比で、枠をそろえます。',
+        description: '全画像の平均で、枠を揃えます。',
     },
     {
         value: 'portrait',
         title: 'Portrait Priority',
-        description: '最も縦長の画像に合わせて、枠をそろえます。',
+        description: '最も縦長の画像に合わせて、枠を揃えます。',
     },
     {
         value: 'landscape',
         title: 'Landscape Priority',
-        description: '最も横長の画像に合わせて、枠をそろえます。',
+        description: '最も横長の画像に合わせて、枠を揃えます。',
     },
     {
         value: 'max_dimensions',
-        title: 'Contain',
+        title: 'Fit to Frame',
         description: '画像全体を枠内に収めます。',
     },
     {
         value: 'original',
-        title: 'No Crop',
-        description: '切り抜かず、元の大きさの比を保って並べます。',
+        title: 'Keep Relative Size',
+        description: '枠に収めず、元画像の縦横比を保ちます。',
     },
 ];
 
